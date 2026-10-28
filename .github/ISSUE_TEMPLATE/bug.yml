@@ -1,0 +1,23 @@
+name: Bug report
+description: Report a reproducible problem without private pairing data.
+body:
+  - type: markdown
+    attributes:
+      value: Never attach setup codes, QR images, HAP storage, raw serials or unredacted logs.
+  - type: textarea
+    id: versions
+    attributes:
+      label: Versions
+      description: Bridge commit/version, Windows build, Node and OpenRGB versions; mock or hardware adapter.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps and expected / observed behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Redacted diagnostic events and workarounds

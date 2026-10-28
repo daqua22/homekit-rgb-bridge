@@ -1,0 +1,54 @@
+name: Hardware compatibility report
+description: Report observed device behavior; community reports require independent verification.
+body:
+  - type: input
+    id: manufacturer
+    attributes:
+      label: Manufacturer
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Exact device model and firmware
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: OpenRGB version, Windows build, Node version, bridge version/commit
+    validations:
+      required: true
+  - type: checkboxes
+    id: features
+    attributes:
+      label: Features actually tested
+      options:
+        - label: Discovery and Direct mode
+        - label: RGB color selection
+        - label: Software off/on (black / restore)
+        - label: Software brightness
+        - label: Apple Home pairing and restart persistence
+        - label: OpenRGB disconnect / reconnect
+        - label: Multiple devices / reorder
+  - type: textarea
+    id: problems
+    attributes:
+      label: Supported features, known problems and reproduction details
+      description: Include conflicting RGB software and how you disabled it. Do not include raw serials or pairing data.
+    validations:
+      required: true
+  - type: dropdown
+    id: verification
+    attributes:
+      label: Verification status
+      options:
+        - Community-reported (tested by reporter, not independently verified)
+        - Untested (request for testing)
+        - Maintainer-verified (link existing maintainer evidence below)
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized evidence and manual checklist results
