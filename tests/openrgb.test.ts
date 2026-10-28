@@ -1,5 +1,4 @@
-import { afterEach, it, expect } from 'vitest';
-import { setTimeout as delay } from 'node:timers/promises';
+import { afterEach, it, expect, vi } from 'vitest';
 import { OpenRGBAdapter } from '../src/adapters/openrgb-adapter.js';
 import { parseController } from '../src/adapters/openrgb-protocol.js';
 import { controller, sdkServer } from './openrgb-fixture.js';
@@ -22,7 +21,9 @@ it('negotiates protocol, handles fragmented responses, enumerates zones and send
   expect(d!.zones).toEqual([{ name: 'Zone', ledCount: 2 }]);
   expect(d!.capabilities.brightness).toBe('software');
   await a.setColor(d!.id, { r: 18, g: 52, b: 86 });
-  await delay(20);
+  await vi.waitFor(() =>
+    expect(server.writes.some((w) => w.id === 1050)).toBe(true),
+  );
   const mode = server.writes.find((w) => w.id === 1101)!;
   expect(mode.body.readUInt32LE()).toBe(mode.body.length);
   expect(mode.body.readUInt32LE(4)).toBe(0);
@@ -40,8 +41,9 @@ it('keeps identities stable across index reorder and routes correctly', async ()
   const reordered = await a.discoverDevices();
   expect(devices[0]!.id).toBe(reordered[1]!.id);
   await a.setColor(devices[0]!.id, { r: 1, g: 2, b: 3 });
-  await delay(10);
-  expect(server.writes.find((w) => w.id === 1050)!.device).toBe(1);
+  await vi.waitFor(() =>
+    expect(server.writes.find((w) => w.id === 1050)?.device).toBe(1),
+  );
 });
 it('rejects unsupported Direct modes, malformed data and ambiguous identities', async () => {
   expect(
@@ -60,15 +62,14 @@ it('fails closed on a device-list notification, reconnects without stale-close r
   const { server, a } = await setup();
   const [d] = await a.discoverDevices();
   server.notify();
-  await delay(10);
-  expect(a.isConnected()).toBe(false);
+  await vi.waitFor(() => expect(a.isConnected()).toBe(false));
   await expect(a.setColor(d!.id, { r: 0, g: 0, b: 0 })).rejects.toThrow();
   await a.connect();
   await a.discoverDevices();
   expect(a.isConnected()).toBe(true);
   await a.disconnect();
   await a.connect();
-  await delay(10);
+  await a.discoverDevices();
   expect(a.isConnected()).toBe(true);
 });
 it('times out requests and rejects pending requests on disconnect', async () => {
