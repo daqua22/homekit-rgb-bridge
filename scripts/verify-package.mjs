@@ -11,7 +11,10 @@ if (createHash('sha256').update(readFileSync(archive)).digest('hex') !== hash)
   throw new Error('Checksum mismatch');
 const listing = spawnSync('tar', ['-tzf', archive], { encoding: 'utf8' });
 if (listing.status !== 0) throw new Error('Unreadable package');
-const files = listing.stdout.trim().split('\n');
+const files = listing.stdout
+  .trim()
+  .split(/\r?\n/)
+  .map((path) => path.replaceAll('\\', '/'));
 if (
   files.some(
     (p) =>

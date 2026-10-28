@@ -110,7 +110,9 @@ try {
       throw new Error('HAP storage not persisted');
   }
   console.log(
-    'Real HAP listener: authenticated endpoint, private default output, persistent HAP storage and POSIX graceful restart verified. Apple Home pairing and Windows reboot remain manual.',
+    process.platform === 'win32'
+      ? 'Real HAP listener and private default output verified on Windows. Apple Home pairing, Ctrl+C and Windows reboot remain manual.'
+      : 'Real HAP listener: authenticated endpoint, private default output, persistent HAP storage and POSIX graceful restart verified. Apple Home pairing and Windows reboot remain manual.',
   );
 } finally {
   child?.kill('SIGKILL');
