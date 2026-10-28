@@ -1,0 +1,25 @@
+{
+  "adapter": "mock",
+  "openrgb": {
+    "host": "127.0.0.1",
+    "port": 6742,
+    "timeoutMs": 3000
+  },
+  "homekit": {
+    "name": "HomeKit RGB Bridge",
+    "port": 51826
+  },
+  "devices": [
+    {
+      "id": "mock:virtual-light",
+      "name": "Virtual RGB Light",
+      "enabled": true
+    }
+  ],
+  "connection": {
+    "pollMs": 5000,
+    "initialRetryMs": 1000,
+    "maxRetryMs": 30000
+  },
+  "logging": "info"
+}
