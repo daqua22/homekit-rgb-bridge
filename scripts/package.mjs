@@ -18,6 +18,7 @@ try {
   mkdirSync(root);
   for (const path of [
     'dist',
+    'public',
     'docs',
     'examples',
     'LICENSE',

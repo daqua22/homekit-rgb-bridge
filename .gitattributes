@@ -2,3 +2,4 @@
 *.cmd text eol=crlf
 *.png binary
 *.gz binary
+*.vbs text eol=crlf

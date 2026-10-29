@@ -1,6 +1,6 @@
 {
   "name": "homekit-rgb-bridge",
-  "version": "0.1.0-dev.0",
+  "version": "0.1.0",
   "private": true,
   "description": "Control your PC's RGB lighting through Apple Home. A standalone, open-source HomeKit bridge for Windows.",
   "type": "module",
@@ -29,16 +29,25 @@
     "package:preview": "node scripts/package.mjs",
     "package:verify": "node scripts/verify-package.mjs",
     "licenses": "node scripts/licenses.mjs && prettier --write THIRD_PARTY_NOTICES.md docs/dependency-licenses.md",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "app": "node dist/index.js app --open",
+    "package:windows": "node scripts/package-windows.mjs",
+    "verify:windows": "node scripts/verify-windows.mjs",
+    "test:browser": "playwright test"
   },
   "dependencies": {
     "@homebridge/hap-nodejs": "2.2.3",
+    "proper-lockfile": "4.1.2",
+    "qrcode": "1.5.4",
     "qrcode-terminal": "0.12.0",
     "zod": "4.6.7"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.64.1",
     "@types/node": "^26.6.6",
+    "@types/proper-lockfile": "^4.1.4",
+    "@types/qrcode": "^1.5.6",
     "@types/qrcode-terminal": "^0.12.2",
     "eslint": "^10.13.0",
     "prettier": "^3.9.10",

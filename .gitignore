@@ -18,3 +18,8 @@ hap-storage/
 AccessoryInfo.*
 IdentifierCache.*
 persist/
+playwright-report/
+test-results/
+admin-session.json
+open-control.html
+backups/

@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>HomeKit RGB Bridge</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <header>
+      <div>
+        <p class="eyebrow">LOCAL CONTROL · EXPERIMENTAL PREVIEW</p>
+        <h1>HomeKit RGB Bridge</h1>
+        <p>Bring your PC lighting into Apple Home.</p>
+      </div>
+      <span id="version" class="badge">v0.1.0</span>
+    </header>
+    <main>
+      <p id="message" role="status" aria-live="polite"></p>
+      <section aria-labelledby="dashboard-title">
+        <h2 id="dashboard-title">Dashboard</h2>
+        <div id="dashboard" class="stats"></div>
+        <div class="actions">
+          <button id="start">Start bridge</button
+          ><button id="stop" class="secondary">Stop bridge</button
+          ><button id="restart" class="secondary">Restart bridge</button
+          ><button id="quit" class="secondary">Quit application</button>
+        </div>
+        <p id="last-error" role="alert"></p>
+      </section>
+      <section aria-labelledby="devices-title">
+        <div class="section-head">
+          <div>
+            <h2 id="devices-title">Devices & zones</h2>
+            <p>
+              Select a whole device or its individual zones. Save before
+              starting new lights.
+            </p>
+          </div>
+          <button id="discover" class="secondary">Discover devices</button>
+        </div>
+        <label class="check"
+          ><input id="zones-consent" type="checkbox" />Enable experimental
+          per-LED zone control. I will verify physical isolation.</label
+        >
+        <p class="hint">
+          Zones require a valid per-LED layout. Firmware may still limit
+          isolation. Zero-LED or ambiguous zones are unavailable. Direct mode
+          replaces existing effects.
+        </p>
+        <div id="devices"></div>
+        <div id="saved-devices"></div>
+      </section>
+      <section aria-labelledby="groups-title">
+        <h2 id="groups-title">Logical groups</h2>
+        <p>
+          Choose targets that are not enabled as separate lights. A failed
+          member makes the group command fail; diagnostics identify accepted and
+          failed targets.
+        </p>
+        <div id="groups"></div>
+        <button id="add-group" class="secondary">Add group</button>
+      </section>
+      <section aria-labelledby="lights-title">
+        <h2 id="lights-title">Test enabled lights</h2>
+        <p>
+          These are desired software values, without physical readback. Off
+          sends black; brightness scales RGB channels.
+        </p>
+        <div id="lights"></div>
+      </section>
+      <section aria-labelledby="home-title">
+        <h2 id="home-title">Apple Home</h2>
+        <p id="pair-status">Start the bridge to check pairing.</p>
+        <button id="show-pairing">Reveal private pairing code & QR</button
+        ><button id="hide-pairing" class="secondary">
+          Hide pairing information
+        </button>
+        <div id="pairing" hidden>
+          <p>
+            Keep this screen private. In Apple Home: + → Add Accessory. This
+            bridge is not Apple-certified.
+          </p>
+          <p id="pin" class="pin"></p>
+          <img
+            id="qr"
+            alt="Private HomeKit setup QR code"
+            width="256"
+            height="256"
+          />
+        </div>
+        <details>
+          <summary>Reset HomeKit pairing</summary>
+          <p>
+            This removes this bridge's pairings after creating a private backup.
+            Remove it from Apple Home first. Your light selections and states
+            remain. Quit and reopen the application afterward.
+          </p>
+          <label
+            >Type RESET HOMEKIT PAIRING<input
+              id="reset-confirm"
+              autocomplete="off" /></label
+          ><button id="reset" class="danger">Back up & reset pairing</button>
+        </details>
+      </section>
+      <section aria-labelledby="settings-title">
+        <h2 id="settings-title">Settings</h2>
+        <div class="grid">
+          <label
+            >Lighting backend<select id="adapter">
+              <option value="openrgb">OpenRGB (real hardware)</option>
+              <option value="mock">Mock virtual light</option>
+            </select></label
+          ><label
+            >OpenRGB host<select id="host">
+              <option>127.0.0.1</option>
+              <option>localhost</option>
+              <option>::1</option>
+            </select></label
+          ><label
+            >OpenRGB port<input
+              id="rgb-port"
+              type="number"
+              min="1"
+              max="65535" /></label
+          ><label
+            >HomeKit bridge name<input id="bridge-name" maxlength="64" /></label
+          ><label
+            >HomeKit port<input
+              id="hap-port"
+              type="number"
+              min="1024"
+              max="65535" /></label
+          ><label
+            >Logging level<select id="logging">
+              <option>error</option>
+              <option>info</option>
+              <option>debug</option>
+            </select></label
+          >
+        </div>
+        <p>
+          Keep the existing HomeKit port when upgrading. 51826 is the default,
+          not a requirement. Use 51827 if another bridge already occupies 51826.
+        </p>
+        <label class="check"
+          ><input id="autostart" type="checkbox" />Launch this profile at
+          Windows sign-in</label
+        >
+        <p class="hint">
+          Uses a user-level Startup launcher; no administrator privileges or
+          firewall changes. OpenRGB must start separately and may need elevated
+          PawnIO access.
+        </p>
+        <p id="data-path"></p>
+        <label class="check"
+          ><input id="save-confirm" type="checkbox" />I confirm these
+          configuration changes. Create a private backup and restart a running
+          bridge.</label
+        ><button id="save">Back up & save configuration</button>
+        <p class="hint">
+          Changing the backend replaces light selections. Changing a whole
+          device to zones creates new HomeKit accessories; existing whole-device
+          UUIDs remain unchanged otherwise.
+        </p>
+      </section>
+      <section aria-labelledby="diagnostics-title">
+        <div class="section-head">
+          <h2 id="diagnostics-title">Diagnostics</h2>
+          <button id="refresh-logs" class="secondary">
+            Refresh diagnostics
+          </button>
+        </div>
+        <p>
+          If RAM is missing from OpenRGB itself, check PawnIO and run OpenRGB as
+          administrator. Close iCUE and other competing RGB tools. Never expose
+          the SDK server to the internet.
+        </p>
+        <pre id="logs" tabindex="0" aria-label="Recent diagnostic events"></pre>
+      </section>
+    </main>
+    <footer>
+      By Daniil Kozar · MIT original code · No telemetry · PC and bridge must
+      remain running
+    </footer>
+  </body>
+</html>

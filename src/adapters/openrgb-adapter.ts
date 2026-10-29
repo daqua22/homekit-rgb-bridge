@@ -21,6 +21,8 @@ export class OpenRGBAdapter implements RGBAdapter {
   private pending?: Pending;
   private controllers = new Map<string, Controller>();
   private queue: Promise<unknown> = Promise.resolve();
+  private initialized = new Set<string>();
+  protocolVersion?: number;
   constructor(
     private host = '127.0.0.1',
     private port = 6742,
@@ -70,6 +72,7 @@ export class OpenRGBAdapter implements RGBAdapter {
       const version = await this.request(0, 40, uint32(3));
       if (version.length !== 4 || version.readUInt32LE() < 3)
         throw new Error('OpenRGB protocol 3 or newer required');
+      this.protocolVersion = version.readUInt32LE();
       await this.send(0, 50, Buffer.from('HomeKit RGB Bridge\0'));
     } catch (error) {
       await this.disconnect();
@@ -78,6 +81,7 @@ export class OpenRGBAdapter implements RGBAdapter {
   }
   private fail(): void {
     this.controllers.clear();
+    this.initialized.clear();
     this.input = Buffer.alloc(0);
     const pending = this.pending;
     this.pending = undefined;
@@ -165,7 +169,12 @@ export class OpenRGBAdapter implements RGBAdapter {
       const all: Controller[] = [];
       for (let i = 0; i < countData.readUInt32LE(); i++)
         all.push(parseController(await this.request(i, 1, uint32(3)), i));
-      this.controllers.clear();
+      const previous = this.controllers;
+      this.controllers = new Map();
+      for (const c of all) {
+        const old = previous.get(c.device.id);
+        if (old && old.index !== c.index) this.initialized.delete(c.device.id);
+      }
       const ids = new Set<string>(),
         duplicates = new Set<string>();
       for (const c of all) {
@@ -190,28 +199,41 @@ export class OpenRGBAdapter implements RGBAdapter {
   setColor(id: string, color: RGBColor): Promise<void> {
     return this.serial(async () => {
       validateRGB(color);
-      const c = this.controllers.get(id);
+      const [parent, zoneHash] = id.split(':zone:');
+      const c = this.controllers.get(parent!);
+      const zone = zoneHash
+        ? c?.device.zones.find((z) => z.id === id)
+        : undefined;
       if (
         !c?.device.capabilities.color ||
         !c.directMode ||
         c.directIndex === undefined
       )
         throw new Error('Unsupported or unavailable OpenRGB device');
+      if (zoneHash && (!zone?.controllable || !c.zoneSafe))
+        throw new Error('Independent zone unavailable');
       const mode = Buffer.concat([
         uint32(8 + c.directMode.length),
         uint32(c.directIndex),
         c.directMode,
       ]);
-      await this.send(c.index, 1101, mode);
+      if (!this.initialized.has(parent!)) {
+        await this.send(c.index, 1101, mode);
+        this.initialized.add(parent!);
+      }
       const data = Buffer.alloc(6 + c.ledCount * 4);
       data.writeUInt32LE(data.length);
       data.writeUInt16LE(c.ledCount, 4);
-      for (let i = 0; i < c.ledCount; i++) {
+      c.colors.copy(data, 6);
+      const start = zone?.offset ?? 0,
+        end = zone ? start + zone.ledCount : c.ledCount;
+      for (let i = start; i < end; i++) {
         data[6 + i * 4] = color.r;
         data[7 + i * 4] = color.g;
         data[8 + i * 4] = color.b;
       }
       await this.send(c.index, 1050, data);
+      c.colors = Buffer.from(data.subarray(6));
     });
   }
 }

@@ -13,12 +13,19 @@ export interface RGBDevice {
   id: string;
   name: string;
   manufacturer: string;
-  zones: { name: string; ledCount: number }[];
+  zones: {
+    name: string;
+    ledCount: number;
+    id?: string;
+    offset?: number;
+    controllable?: boolean;
+    reason?: string;
+  }[];
   capabilities: {
     color: boolean;
     brightness: 'software' | 'none';
     power: 'software' | 'none';
-    independentZones: false;
+    independentZones: boolean;
     reason?: string;
   };
 }

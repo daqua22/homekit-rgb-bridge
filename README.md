@@ -1,121 +1,100 @@
 # HomeKit RGB Bridge
 
 [![CI](https://github.com/daqua22/homekit-rgb-bridge/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/daqua22/homekit-rgb-bridge/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Control your PC's RGB lighting through Apple Home. A small, local TypeScript bridge between HAP-NodeJS and a separately running OpenRGB SDK server. No Homebridge, cloud account or extra hardware.
+Control compatible PC RGB lighting from Apple Home. A local Windows application built with HAP-NodeJS and the OpenRGB SDK. No Homebridge, cloud account, telemetry or additional hardware.
 
-**Experimental development preview · Windows target · no hardware verified yet.** This is a Node.js CLI application, not a standalone `.exe`, installer, Windows service, or Apple-certified HomeKit accessory. No tagged release has been published. Apple Home pairing, Windows startup and physical RGB operation still need the [manual verification checklist](docs/manual-verification.md).
+**v0.1.0 experimental release candidate — publication requires maintainer approval.** This branch prepares a portable Windows x64 package with its own Node runtime, local configuration panel and background launcher. It is not an Apple-certified accessory, a native single-file executable, an installer, or a Windows service.
 
-```mermaid
-flowchart LR
-    Home[Apple Home / Siri] --> HAP[HAP-NodeJS bridge]
-    HAP --> Manager[Device manager]
-    Manager --> Mock[Mock adapter]
-    Manager --> SDK[OpenRGB TCP adapter]
-    SDK --> RGB[Local OpenRGB / hardware]
-```
+![Actual local control panel in automated mock-mode verification](docs/images/control-panel-overview.png)
+_Actual Chromium capture of the local configuration interface in mock mode. This screenshot does not demonstrate physical hardware._
 
-## What works in software
+## Features
 
-- HomeKit Lightbulb accessories with on/off, hue, saturation and brightness handlers.
-- A mock RGB light for development without hardware.
-- OpenRGB protocol-3 negotiation, device/zone discovery and whole-device RGB updates.
-- Explicit device opt-in, stable identities, persistent desired state and HAP pairing storage.
-- Bounded reconnect backoff, device disappearance handling and clean signal shutdown.
-- Per-installation random setup code and terminal QR, shown only with `--pairing`.
-- Automated unit, HAP handler, TCP protocol, runtime smoke and packaging checks.
+- Local dashboard with bridge, adapter, pairing and accessory status; start/stop/restart controls and diagnostics.
+- Device discovery, friendly HomeKit names, enable/disable and configuration without editing JSON.
+- Optional experimental zone lights for valid per-LED layouts, including safe handling of empty zones.
+- Logical groups with explicit partial-failure reporting; no silent group success.
+- HomeKit on/off, hue, saturation and brightness; coalesced slider commands preserve the latest requested state.
+- Private, explicit QR/PIN reveal; persistent pairing identity and backed-up configuration migrations.
+- OpenRGB rediscovery, bounded reconnection and abandoned-lock recovery.
+- User-level Windows sign-in startup and a hidden background launcher.
+- Mock mode and synthetic protocol tests without hardware.
 
-**Limits:** only controllers advertising a **Direct** mode with per-LED color are eligible. Zones are listed but V1 sets one color across the entire device. Brightness scales RGB channels; off sends black. Neither cuts electrical power. Values represent the last transport-accepted desired state; there is no verified physical readback or synchronization with other RGB apps. Protocol 3 has no hardware-write acknowledgment. Identical controllers without distinct serial/location are rejected.
+## Evidence and limits
 
-OpenRGB compatibility depends on the exact controller, firmware and OpenRGB version. **Running OpenRGB alongside Corsair iCUE, Armoury Crate, Mystic Light or other manufacturer RGB software can cause conflicts.** No iCUE adapter is included. See [hardware compatibility](docs/hardware-compatibility.md).
+The project maintainer verified Windows installation/build/lint, the original 43 tests, virtual-light pairing, physical SDK discovery, hardware-bridge pairing and **physical color control of two Corsair Vengeance RGB DDR5 modules**. OpenRGB 1.1 / SDK 6 was reported. This is maintainer-reported hardware evidence, separate from automated CI.
+
+The iCUE LINK hub, Logitech mouse and Gigabyte motherboard were **discovered only**. Other devices, zone isolation, groups, brightness, software on/off, reconnect, reboot and sleep/wake have **not** been physically verified. See the [compatibility matrix](docs/hardware-compatibility.md) and [manual checklist](docs/manual-verification.md).
+
+Power-off sends **black**, without cutting electrical power. Brightness scales RGB channels. Values are desired software state; protocol 3 provides no hardware-write acknowledgment. Zones require explicit experimental consent, a per-LED Direct mode, unique zone names and a complete LED partition; listed zones alone are insufficient. Whole-device and overlapping zone/group selections are rejected. Another application changing the same LEDs can defeat isolation/state assumptions.
+
+**OpenRGB compatibility depends on exact hardware and firmware. Running OpenRGB alongside Corsair iCUE, Armoury Crate, Mystic Light or other RGB utilities can cause conflicts.** No iCUE adapter or low-level SMBus/fan/pump control is included.
 
 ## Requirements
 
-- Windows 10/11, a supported Node.js runtime (Node 24 recommended) and npm.
-- For actual RGB: separately installed OpenRGB supporting SDK protocol 3 or newer, with the SDK server listening locally on TCP 6742.
-- An iPhone/iPad with Apple Home on the same trusted LAN; multicast DNS must work.
-- PC powered on and awake. Remote access/automations depend on Apple's home hub setup.
+- Windows 10/11 x64 for the portable package. Windows Script Host and a modern browser for its launcher/control panel.
+- Separately installed OpenRGB with a local SDK server. For RGB RAM, follow OpenRGB's PawnIO and administrator-access instructions.
+- An iPhone/iPad with Apple Home on the same trusted LAN; the PC must stay awake and running.
+- A supported Node runtime and npm only for source development. Portable users need neither npm nor development tools.
 
-## Quick start: virtual light
+## Install the Windows portable candidate
 
-In PowerShell:
+Until release approval, download `windows-x64-experimental-review` from a successful [PR/CI run](https://github.com/daqua22/homekit-rgb-bridge/actions) (GitHub sign-in may be required). No public Release is claimed.
+
+1. Verify the portable ZIP's SHA-256 against the checksum file from the same build.
+2. Extract the **entire** ZIP to a writable, stable application folder.
+3. Double-click **Launch-Bridge.vbs**. Choose your private data directory. For an upgrade, choose the exact existing folder; a hardware profile may be `%LOCALAPPDATA%\HomeKitRGBBridge-Hardware`.
+4. Configure OpenRGB and start its SDK server. In the control panel, choose the backend, discover devices, select/rename lights, confirm and save.
+5. Start the bridge. Click **Reveal private pairing code & QR** and add it in Apple Home. Hide the credentials afterward.
+6. Enable **Launch this profile at Windows sign-in** if desired. OpenRGB must start separately.
+
+The launcher runs in the background, opens the browser through a private local handoff file and puts no pairing/admin secrets in process arguments. Closing the browser leaves the bridge running; **Quit application** shuts it down. No automatic firewall changes are made. Read [installation, upgrades and uninstall](docs/installation-windows.md) before using an existing installation.
+
+## Source quick start
 
 ```powershell
 git clone https://github.com/daqua22/homekit-rgb-bridge.git
 cd homekit-rgb-bridge
 npm ci
 npm run build
-npm start -- init --mock
-npm start -- list
-npm start -- start --pairing
+npm run app
 ```
 
-In Apple Home, choose **+ → Add Accessory**, then scan the private terminal QR or enter its setup code. Accept the uncertified-accessory prompt if offered. Pairing has not yet been tested with a physical iPhone. Keep this terminal private; never post its QR, setup URI or setup code. Use `npm start` for subsequent normal runs. Stop with Ctrl+C.
+For a new simulated profile: `npm start -- init --mock`, then `npm run app`. Existing CLI commands remain available: `init`, `list`, `check`, `start --pairing`; all accept `--data-dir`. The admin interface prefers loopback port 8787 and falls back to a free port if busy. HomeKit defaults to 51826; user-selected ports such as 51827 are retained.
 
-## Connect real hardware
-
-Start with a separate data directory if you already created a mock setup:
-
-```powershell
-npm start -- init --data-dir "$env:LOCALAPPDATA\HomeKitRGBBridge-Hardware"
-npm start -- list --data-dir "$env:LOCALAPPDATA\HomeKitRGBBridge-Hardware"
-```
-
-Edit that directory's `config.json`: copy the desired device's `id` from `list` into `devices`, set a friendly `name` and `enabled: true`. Then run:
-
-```powershell
-npm start -- check --data-dir "$env:LOCALAPPDATA\HomeKitRGBBridge-Hardware"
-npm start -- start --pairing --data-dir "$env:LOCALAPPDATA\HomeKitRGBBridge-Hardware"
-```
-
-Follow [OpenRGB setup](docs/openrgb-setup.md) before enabling hardware. Listing never changes colors. Starting the bridge applies saved desired states (new lights start off), switches selected controllers into Direct mode and may replace manufacturer effects.
-
-## Install and operate
-
-[Windows installation and startup](docs/installation-windows.md) covers source installation, Node preview archives, Task Scheduler, upgrade and uninstall. No download or standalone-executable claims are made. Preview archives, when built, contain compiled JavaScript and require a separate Node installation plus `npm ci --omit=dev --ignore-scripts`.
-
-Configuration and pairing data live in `%LOCALAPPDATA%\HomeKitRGBBridge` by default, outside the repository. On macOS/Linux development machines: `~/.homekit-rgb-bridge`. Back up this entire private directory before an upgrade; protect it as credentials. Restrict Windows folder access as described in [security](SECURITY.md).
-
-## Development
+## Development and verification
 
 ```powershell
 npm ci
 npm run check
 npm run format:check
 npm run smoke
+npm run test:browser
 npm run licenses
 npm run package:preview
 npm run package:verify
+# Windows x64 only:
+npm run package:windows
+npm run verify:windows
 ```
 
-`npm run check` runs ESLint, strict TypeScript checks, Vitest and compilation. CI runs on Windows and Linux with Node 24 and 26. Packaging does not publish anything. Tests use a mock adapter and synthetic local SDK server; they do not certify real hardware.
+Install Chromium once with `npx playwright install chromium` for browser checks. CI validates Windows/Linux with Node 24/26, browser flows on Windows and Linux, and an extracted Windows package using the bundled runtime and hidden launcher. No workflow publishes a release from ordinary commits. See [development](docs/development.md) and [verification](docs/verification.md).
 
 ## Documentation
 
-| Start here                                           | Reference                                                | Engineering                                        |
-| ---------------------------------------------------- | -------------------------------------------------------- | -------------------------------------------------- |
-| [Getting started](docs/getting-started.md)           | [Configuration](docs/configuration.md)                   | [Architecture](docs/architecture.md)               |
-| [Windows installation](docs/installation-windows.md) | [Hardware compatibility](docs/hardware-compatibility.md) | [Development](docs/development.md)                 |
-| [Apple Home pairing](docs/apple-home-pairing.md)     | [Troubleshooting](docs/troubleshooting.md)               | [Manual verification](docs/manual-verification.md) |
-| [OpenRGB setup](docs/openrgb-setup.md)               | [FAQ](docs/faq.md)                                       | [Release process](docs/releases.md)                |
+| Operation                                            | Reference                                                | Engineering                          |
+| ---------------------------------------------------- | -------------------------------------------------------- | ------------------------------------ |
+| [Getting started](docs/getting-started.md)           | [Configuration](docs/configuration.md)                   | [Architecture](docs/architecture.md) |
+| [Windows installation](docs/installation-windows.md) | [Hardware compatibility](docs/hardware-compatibility.md) | [Development](docs/development.md)   |
+| [Apple Home pairing](docs/apple-home-pairing.md)     | [Troubleshooting](docs/troubleshooting.md)               | [Verification](docs/verification.md) |
+| [OpenRGB setup](docs/openrgb-setup.md)               | [FAQ](docs/faq.md)                                       | [Release process](docs/releases.md)  |
 
-No screenshots or physical-device demonstrations are supplied: none have been verified. See [validation evidence](docs/verification.md) for the precise tested scope.
+## Contribute and roadmap
 
-## Contribute
+Read [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) and [SECURITY.md](SECURITY.md). Issue forms cover bugs, features and hardware reports. Contribute adapters behind `RGBAdapter`, with synthetic fixtures and truthful capability reporting.
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) and [SECURITY.md](SECURITY.md). Use GitHub Issues for bugs, features and hardware reports. Reports distinguish maintainer-verified hardware from unverified community claims. A future adapter can implement `RGBAdapter` without changing HomeKit handlers.
+Next gates: validate new zone/group behavior on physical devices, exercise fresh Windows 10/11 desktops and upgrades, test sign-in/reboot/sleep/wake, review the unsigned portable package, and obtain explicit release approval. Native tray/installer/service and arm64 distribution remain future work.
 
-## Roadmap
-
-- Complete Apple Home + Windows 10/11 + physical-device verification.
-- Publish an explicitly experimental `v0.1.0` only after preview gates pass.
-- Expand compatibility fixtures and review direct-mode variants.
-- Evaluate zone selection, tray UI, installer and service operation after the core is validated.
-- Investigate other backends, including iCUE, as separate work.
-
-## License and author
-
-Original code: [MIT](LICENSE). Runtime dependencies keep their own licenses; see [license review](docs/dependency-licenses.md) and [third-party notices](THIRD_PARTY_NOTICES.md). OpenRGB and Node.js are not bundled.
-
-Created by [Daniil Kozar](https://kozar.dev).
+Original code is [MIT](LICENSE), by [Daniil Kozar](https://kozar.dev). [Dependency notices](THIRD_PARTY_NOTICES.md) are retained. Portable builds also include the unmodified Node runtime's complete license file. OpenRGB and drivers are not bundled.

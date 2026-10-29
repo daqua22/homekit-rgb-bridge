@@ -15,6 +15,7 @@ import { OpenRGBAdapter } from './adapters/openrgb-adapter.js';
 import { DeviceManager } from './devices/device-manager.js';
 import { AccessoryManager } from './homekit/accessory-manager.js';
 import { Logger } from './utils/logger.js';
+import { runApp } from './app/run.js';
 export async function main(args = process.argv.slice(2)): Promise<void> {
   if (process.platform !== 'win32') process.umask(0o077);
   const { values, positionals } = parseArgs({
@@ -25,22 +26,37 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
       mock: { type: 'boolean' },
       pairing: { type: 'boolean' },
       help: { type: 'boolean' },
+      open: { type: 'boolean' },
+      'admin-port': { type: 'string' },
     },
   });
   const command = positionals[0] ?? 'start';
   if (values.help) {
     console.log(
-      'HomeKit RGB Bridge (experimental)\nCommands: init [--mock], list, check, start [--pairing]\nOptions: --data-dir <absolute path>, --help\nPairing output contains secrets; use only in a private terminal.',
+      'HomeKit RGB Bridge (experimental)\nCommands: app [--open], init [--mock], list, check, start [--pairing]\nOptions: --data-dir <absolute path>, --help\nPairing output contains secrets; use only in a private terminal.',
     );
     return;
   }
   if (
     positionals.length > 1 ||
-    !['init', 'list', 'check', 'start'].includes(command)
+    !['app', 'init', 'list', 'check', 'start'].includes(command)
   )
     throw new Error('Unknown command');
   const dir = resolve(values['data-dir'] ?? dataDirectory());
   ensurePrivateDirectory(dir);
+  if (command === 'app') {
+    const port =
+      values['admin-port'] === undefined
+        ? undefined
+        : Number(values['admin-port']);
+    if (
+      port !== undefined &&
+      (!Number.isInteger(port) || port < 1024 || port > 65535)
+    )
+      throw new Error('Invalid control-panel port');
+    await runApp(dir, values.open ?? false, port);
+    return;
+  }
   if (command === 'init') {
     initialize(dir, values.mock ?? false);
     console.log(

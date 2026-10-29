@@ -18,7 +18,11 @@ it('negotiates protocol, handles fragmented responses, enumerates zones and send
   const { server, a } = await setup();
   server.state.fragment = true;
   const [d] = await a.discoverDevices();
-  expect(d!.zones).toEqual([{ name: 'Zone', ledCount: 2 }]);
+  expect(d!.zones[0]).toMatchObject({
+    name: 'Zone',
+    ledCount: 2,
+    controllable: true,
+  });
   expect(d!.capabilities.brightness).toBe('software');
   await a.setColor(d!.id, { r: 18, g: 52, b: 86 });
   await vi.waitFor(() =>

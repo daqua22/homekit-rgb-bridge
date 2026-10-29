@@ -6,14 +6,14 @@ on:
   workflow_dispatch:
     inputs:
       upload_preview:
-        description: Upload verified Node preview archive as a CI artifact (no release)
+        description: Retained for compatibility; CI always uploads verified Windows artifacts
         required: false
         type: boolean
-        default: false
+        default: true
 permissions:
   contents: read
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   validate:
@@ -38,10 +38,22 @@ jobs:
       - run: npm audit --omit=dev
       - run: npm run package:preview
       - run: npm run package:verify
+      - if: matrix.os == 'ubuntu-latest' && matrix.node == 24
+        run: npx playwright install --with-deps chromium
+      - if: matrix.os == 'windows-latest' && matrix.node == 24
+        run: npx playwright install chromium
+      - if: matrix.node == 24
+        run: npm run test:browser
+      - if: matrix.os == 'windows-latest' && matrix.node == 24
+        run: npm run package:windows
+      - if: matrix.os == 'windows-latest' && matrix.node == 24
+        run: npm run verify:windows
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: github.event_name == 'workflow_dispatch' && inputs.upload_preview && matrix.os == 'windows-latest' && matrix.node == 24
+        if: matrix.os == 'windows-latest' && matrix.node == 24
         with:
-          name: windows-node-experimental-preview
-          path: artifacts/*
+          name: windows-x64-experimental-review
+          path: |
+            artifacts/*windows-x64-portable.zip
+            artifacts/SHA256SUMS-windows-x64.txt
           retention-days: 14
           if-no-files-found: error
