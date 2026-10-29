@@ -1,5 +1,5 @@
 import { randomBytes, randomInt } from 'node:crypto';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
 import { readJSON, writeJSON } from './config-manager.js';
@@ -12,6 +12,13 @@ export type Identity = z.infer<typeof schema>;
 export function loadIdentity(dir: string): Identity {
   const path = join(dir, 'identity.json');
   if (existsSync(path)) return schema.parse(readJSON(path));
+  if (
+    existsSync(join(dir, 'hap-storage')) &&
+    readdirSync(join(dir, 'hap-storage')).length
+  )
+    throw new Error(
+      'Existing HAP storage requires restoring its original identity from backup',
+    );
   let pin: string;
   do {
     pin = String(randomInt(100000000)).padStart(8, '0');

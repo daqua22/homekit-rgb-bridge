@@ -47,7 +47,7 @@ export function createLight(
         )
           throw new HapStatusError(HAPStatus.INVALID_VALUE_IN_REQUEST);
         try {
-          await manager.set(id, { [key]: value } as Partial<LightState>);
+          await manager.request(id, { [key]: value } as Partial<LightState>);
         } catch {
           throw new HapStatusError(HAPStatus.SERVICE_COMMUNICATION_FAILURE);
         }

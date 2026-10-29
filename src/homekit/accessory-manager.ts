@@ -1,3 +1,4 @@
+import { VERSION } from '../version.js';
 import {
   Bridge,
   Categories,
@@ -13,8 +14,12 @@ import qr from 'qrcode-terminal';
 import type { Config } from '../config/config-manager.js';
 import { ensurePrivateDirectory } from '../config/config-manager.js';
 import type { Identity } from '../config/identity.js';
-import type { DeviceManager } from '../devices/device-manager.js';
+import {
+  configuredLights,
+  type DeviceManager,
+} from '../devices/device-manager.js';
 import { createLight } from './light-accessory.js';
+let storagePath: string | undefined;
 export class AccessoryManager {
   readonly bridge: Bridge;
   constructor(
@@ -25,7 +30,11 @@ export class AccessoryManager {
   ) {
     const storage = join(dir, 'hap-storage');
     ensurePrivateDirectory(storage);
-    HAPStorage.setCustomStoragePath(storage);
+    if (!storagePath) {
+      HAPStorage.setCustomStoragePath(storage);
+      storagePath = storage;
+    } else if (storagePath !== storage)
+      throw new Error('One HAP data directory per process is required');
     this.bridge = new Bridge(
       config.homekit.name,
       uuid.generate('homekit-rgb-bridge:' + identity.username),
@@ -38,8 +47,8 @@ export class AccessoryManager {
         Characteristic.SerialNumber,
         identity.username.replaceAll(':', ''),
       )
-      .setCharacteristic(Characteristic.FirmwareRevision, '0.1.0-dev.0');
-    for (const d of config.devices.filter((d) => d.enabled))
+      .setCharacteristic(Characteristic.FirmwareRevision, VERSION);
+    for (const d of configuredLights(config))
       this.bridge.addBridgedAccessory(createLight(d.id, d.name, manager));
   }
   async start(showPairing = false): Promise<void> {
@@ -77,6 +86,12 @@ export class AccessoryManager {
       console.log(`HomeKit setup code: ${this.identity.pincode}`);
       qr.generate(this.bridge.setupURI(), { small: true });
     }
+  }
+  paired(): boolean {
+    return this.bridge._accessoryInfo?.paired() ?? false;
+  }
+  pairing(): { pincode: string; uri: string } {
+    return { pincode: this.identity.pincode, uri: this.bridge.setupURI() };
   }
   async stop(): Promise<void> {
     await this.bridge.unpublish();

@@ -13,11 +13,13 @@ export function controller(
   name = 'Test Light',
   serial = 'unique',
   direct = true,
+  zones = [{ name: 'Zone', count: 2 }],
+  flags = 32,
 ): Buffer {
-  // Protocol 3: real layout, two LEDs in one zone. Not captured hardware data.
+  const leds = zones.reduce((n, z) => n + z.count, 0);
   const mode = Buffer.concat([
     str(direct ? 'Direct' : 'Rainbow'),
-    ...[0, direct ? 32 : 0, 0, 0, 0, 100, 0, 0, 0, 100, 0, 1].map(uint32),
+    ...[0, direct ? flags : 0, 0, 0, 0, 100, 0, 0, 0, 100, 0, 1].map(uint32),
     u16(0),
   ]);
   const body = Buffer.concat([
@@ -31,20 +33,23 @@ export function controller(
     u16(1),
     uint32(0),
     mode,
-    u16(1),
-    str('Zone'),
-    uint32(0),
-    uint32(2),
-    uint32(2),
-    uint32(2),
-    u16(0),
-    u16(2),
-    str('LED 1'),
-    uint32(0),
-    str('LED 2'),
-    uint32(1),
-    u16(2),
-    Buffer.alloc(8),
+    u16(zones.length),
+    ...zones.map((z) =>
+      Buffer.concat([
+        str(z.name),
+        uint32(0),
+        uint32(z.count),
+        uint32(z.count),
+        uint32(z.count),
+        u16(0),
+      ]),
+    ),
+    u16(leds),
+    ...Array.from({ length: leds }, (_, i) =>
+      Buffer.concat([str('LED ' + i), uint32(i)]),
+    ),
+    u16(leds),
+    Buffer.alloc(leds * 4),
   ]);
   return Buffer.concat([uint32(body.length + 4), body]);
 }

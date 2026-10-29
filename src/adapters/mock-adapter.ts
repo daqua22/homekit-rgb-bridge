@@ -34,7 +34,11 @@ export class MockRGBAdapter implements RGBAdapter {
     validateRGB(color);
     if (
       !this.connected ||
-      !this.devices.some((d) => d.id === id && d.capabilities.color)
+      !this.devices.some(
+        (d) =>
+          (d.id === id || d.zones.some((z) => z.id === id && z.controllable)) &&
+          d.capabilities.color,
+      )
     )
       throw new Error('Device unavailable');
     this.colors.set(id, { ...color });

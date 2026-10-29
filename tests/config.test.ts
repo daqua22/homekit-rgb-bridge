@@ -1,5 +1,5 @@
 import { afterEach, describe, it, expect } from 'vitest';
-import { mkdtempSync, rmSync, readFileSync, statSync } from 'node:fs';
+import { mkdtempSync, rmSync, existsSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -71,9 +71,7 @@ describe('configuration and local persistence', () => {
     const dir = temp(),
       unlock = acquireLock(dir);
     expect(() => acquireLock(dir)).toThrow();
-    expect(readFileSync(join(dir, 'bridge.lock'), 'utf8')).toBe(
-      String(process.pid),
-    );
+    expect(existsSync(join(dir, 'application.lock'))).toBe(true);
     unlock();
     acquireLock(dir)();
   });

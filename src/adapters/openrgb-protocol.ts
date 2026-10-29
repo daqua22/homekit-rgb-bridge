@@ -47,6 +47,8 @@ export interface Controller {
   ledCount: number;
   directMode?: Buffer;
   directIndex?: number;
+  colors: Buffer;
+  zoneSafe: boolean;
 }
 export function parseController(data: Buffer, index: number): Controller {
   const r = new Reader(data);
@@ -62,6 +64,7 @@ export function parseController(data: Buffer, index: number): Controller {
   const numModes = r.u16();
   r.u32();
   let directMode: Buffer | undefined, directIndex: number | undefined;
+  let requiresEntireDevice = true;
   for (let m = 0; m < numModes; m++) {
     const start = r.offset,
       modeName = r.string(),
@@ -84,6 +87,7 @@ export function parseController(data: Buffer, index: number): Controller {
     ) {
       directMode = Buffer.from(data.subarray(start, r.offset));
       directIndex = m;
+      requiresEntireDevice = (flags & 1024) !== 0;
       // Protocol 3 mode: brightness at field 9; color mode at field 11.
       directMode.writeUInt32LE(brightnessMax, base - start + 36);
       directMode.writeUInt32LE(1, base - start + 44);
@@ -96,7 +100,11 @@ export function parseController(data: Buffer, index: number): Controller {
     r.take(12);
     const count = r.u32();
     r.take(r.u16());
-    zones.push({ name: zoneName, ledCount: count });
+    zones.push({
+      name: zoneName,
+      ledCount: count,
+      offset: zones.reduce((n, z) => n + z.ledCount, 0),
+    });
   }
   const ledCount = r.u16();
   for (let led = 0; led < ledCount; led++) {
@@ -104,7 +112,7 @@ export function parseController(data: Buffer, index: number): Controller {
     r.u32();
   }
   const colorCount = r.u16();
-  r.take(colorCount * 4);
+  const colors = Buffer.from(r.take(colorCount * 4));
   if (r.offset !== data.length)
     throw new Error('Unexpected protocol-3 controller data');
   const id =
@@ -115,8 +123,27 @@ export function parseController(data: Buffer, index: number): Controller {
       .slice(0, 24);
   const supported =
     directMode !== undefined && ledCount > 0 && colorCount === ledCount;
+  const zoneSafe =
+    supported &&
+    !requiresEntireDevice &&
+    zones.reduce((n, z) => n + z.ledCount, 0) === ledCount &&
+    new Set(zones.map((z) => z.name)).size === zones.length;
+  for (const z of zones) {
+    z.id =
+      id +
+      ':zone:' +
+      createHash('sha256').update(z.name).digest('hex').slice(0, 16);
+    z.controllable = zoneSafe && z.ledCount > 0;
+    z.reason = z.controllable
+      ? 'Experimental per-LED range; physical isolation requires testing'
+      : z.ledCount === 0
+        ? 'Zone has no LEDs'
+        : 'Independent control cannot be established from this controller layout/mode';
+  }
   return {
     index,
+    colors,
+    zoneSafe,
     ledCount,
     directMode,
     directIndex,
@@ -129,7 +156,7 @@ export function parseController(data: Buffer, index: number): Controller {
         color: supported,
         brightness: supported ? 'software' : 'none',
         power: supported ? 'software' : 'none',
-        independentZones: false,
+        independentZones: zoneSafe,
         ...(supported
           ? {}
           : {
