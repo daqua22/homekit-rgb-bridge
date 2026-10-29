@@ -88,7 +88,9 @@ test('local launcher handoff opens the authenticated dashboard', async ({
       response.request().isNavigationRequest() &&
       response.url().startsWith(session.origin + '/'),
   );
-  await page.goto(pathToFileURL(join(dir, 'open-control.html')).href);
+  await page.goto(pathToFileURL(join(dir, 'open-control.html')).href, {
+    waitUntil: 'commit',
+  });
   const response = await navigation;
   expect(response.status()).toBe(200);
   const headers = await response.request().allHeaders();
@@ -101,7 +103,9 @@ test('browser → authenticated API → persisted config/state → mock adapter 
 }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
-  await page.goto(pathToFileURL(join(dir, 'open-control.html')).href);
+  await page.goto(pathToFileURL(join(dir, 'open-control.html')).href, {
+    waitUntil: 'commit',
+  });
   await expect(
     page.getByRole('heading', { name: 'HomeKit RGB Bridge', exact: true }),
   ).toBeVisible();
