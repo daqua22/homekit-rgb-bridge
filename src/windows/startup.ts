@@ -40,6 +40,12 @@ export function startupFile(
 export function startupEnabled(dir: string): boolean {
   return process.platform === 'win32' && existsSync(startupFile(dir));
 }
+export function readLauncher(path: string): string {
+  const bytes = readFileSync(path);
+  return bytes[0] === 0xff && bytes[1] === 0xfe
+    ? bytes.subarray(2).toString('utf16le')
+    : bytes.toString('utf8');
+}
 export function setStartup(
   dir: string,
   enable: boolean,
@@ -56,15 +62,15 @@ export function setStartup(
     const text = launcherScript(node, entry, dir);
     if (
       existsSync(path) &&
-      readFileSync(path, 'utf8') !== text &&
-      !readFileSync(path, 'utf8').startsWith("' HomeKit RGB Bridge:")
+      readLauncher(path) !== text &&
+      !readLauncher(path).startsWith("' HomeKit RGB Bridge:")
     )
       throw new Error(
         'Existing startup item was not created by this application',
       );
-    writeFileSync(path, text, { mode: 0o600 });
+    writeFileSync(path, '\ufeff' + text, { mode: 0o600, encoding: 'utf16le' });
   } else if (existsSync(path)) {
-    if (!readFileSync(path, 'utf8').startsWith("' HomeKit RGB Bridge:"))
+    if (!readLauncher(path).startsWith("' HomeKit RGB Bridge:"))
       throw new Error('Unrecognized startup item');
     unlinkSync(path);
   }

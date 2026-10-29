@@ -1,5 +1,13 @@
 import { afterEach, it, expect } from 'vitest';
-import { mkdtempSync, rmSync, readFileSync } from 'node:fs';
+import {
+  mkdtempSync,
+  rmSync,
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  existsSync,
+  readdirSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { initialize } from '../src/config/config-manager.js';
@@ -113,4 +121,52 @@ it('rejects malformed/oversized admin bodies and denies preflight without CORS p
   });
   expect(options.status).toBe(403);
   expect(options.headers.get('Access-Control-Allow-Origin')).toBe(null);
+});
+it('rejects a rebound Host header even with a valid local bearer', async () => {
+  const { admin } = await setup();
+  const { request } = await import('node:http');
+  const status = await new Promise<number | undefined>((resolve, reject) => {
+    const req = request(
+      admin.origin + '/api/status',
+      {
+        headers: {
+          Host: 'attacker.example',
+          Authorization: 'Bearer ' + admin.token,
+        },
+      },
+      (res) => {
+        res.resume();
+        res.on('end', () => resolve(res.statusCode));
+      },
+    );
+    req.on('error', reject);
+    req.end();
+  });
+  expect(status).toBe(403);
+});
+
+it('backs up before deliberate reset and retains config/state while requiring a new process', async () => {
+  const { controller, dir } = await setup();
+  const { loadIdentity } = await import('../src/config/identity.js');
+  loadIdentity(dir);
+  mkdirSync(join(dir, 'hap-storage'));
+  writeFileSync(
+    join(dir, 'hap-storage', 'old-pairing'),
+    'private synthetic pairing',
+  );
+  writeFileSync(
+    join(dir, 'state.json'),
+    '{"mock:virtual-light":{"on":true,"hue":0,"saturation":0,"brightness":50}}',
+  );
+  const originalConfig = readFileSync(join(dir, 'config.json'), 'utf8'),
+    originalState = readFileSync(join(dir, 'state.json'), 'utf8');
+  await controller.reset('RESET HOMEKIT PAIRING');
+  expect(existsSync(join(dir, 'identity.json'))).toBe(false);
+  expect(existsSync(join(dir, 'hap-storage'))).toBe(false);
+  expect(readFileSync(join(dir, 'config.json'), 'utf8')).toBe(originalConfig);
+  expect(readFileSync(join(dir, 'state.json'), 'utf8')).toBe(originalState);
+  const backup = readdirSync(join(dir, 'backups'))[0]!;
+  expect(existsSync(join(dir, 'backups', backup, 'identity.json'))).toBe(true);
+  expect(controller.status().restartRequired).toBe(true);
+  await expect(controller.start()).rejects.toThrow('reopen');
 });

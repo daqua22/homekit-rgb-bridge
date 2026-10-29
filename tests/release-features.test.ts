@@ -31,6 +31,7 @@ import {
   launcherScript,
   setStartup,
   startupFile,
+  readLauncher,
 } from '../src/windows/startup.js';
 const cleanups: (() => void | Promise<void>)[] = [];
 function temp() {
@@ -118,7 +119,7 @@ it('writes scoped user-startup launchers without admin commands or pairing secre
     'win32',
   );
   const file = startupFile(dir, appdata),
-    script = readFileSync(file, 'utf8');
+    script = readLauncher(file);
   expect(script).toContain(' app --data-dir ');
   expect(script).toContain(', 0, False');
   expect(script).not.toMatch(/pairing|runas|powershell/i);
@@ -281,4 +282,21 @@ it('synchronizes all group members on successful commands', async () => {
   expect(a.colors.get(virtualDevice.id)).toEqual({ r: 0, g: 64, b: 0 });
   expect(a.colors.get(other.id)).toEqual({ r: 0, g: 64, b: 0 });
   expect(m.store.get('group:all').on).toBe(true);
+});
+it('retains Unicode profile paths in a Windows-compatible UTF-16 launcher', () => {
+  const dir = join(temp(), '灯光'),
+    appdata = temp();
+  mkdirSync(dir);
+  setStartup(
+    dir,
+    true,
+    process.execPath,
+    join(dir, 'bridge.js'),
+    appdata,
+    'win32',
+  );
+  const path = startupFile(dir, appdata);
+  expect([...readFileSync(path).subarray(0, 2)]).toEqual([255, 254]);
+  expect(readLauncher(path)).toContain('灯光');
+  setStartup(dir, false, process.execPath, 'entry', appdata, 'win32');
 });

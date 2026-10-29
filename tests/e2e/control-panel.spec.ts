@@ -161,6 +161,37 @@ test('browser → authenticated API → persisted config/state → mock adapter 
   expect(await page.evaluate(() => document.activeElement?.tagName)).not.toBe(
     'BODY',
   );
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page
+    .locator('#devices')
+    .getByLabel('Virtual RGB Light', { exact: true })
+    .uncheck();
+  await page.getByRole('button', { name: 'Add group', exact: true }).click();
+  await page
+    .locator('#groups')
+    .getByLabel('Group name', { exact: true })
+    .fill('Desk Group');
+  await page
+    .locator('#groups')
+    .getByLabel('Enable group', { exact: true })
+    .check();
+  await page
+    .locator('#groups')
+    .getByLabel('Virtual RGB Light', { exact: true })
+    .check();
+  await page
+    .getByLabel('I confirm these configuration changes.', { exact: false })
+    .check();
+  await page
+    .getByRole('button', { name: 'Back up & save configuration' })
+    .click();
+  await expect
+    .poll(async () => {
+      const s = await api('status');
+      return s.lights[0]?.name;
+    })
+    .toBe('Desk Group');
+  expect(readFileSync(join(dir, 'identity.json'), 'utf8')).toBe(identity);
 });
 test('rejects untrusted requests and keeps pairing private in default dashboard', async ({
   request,

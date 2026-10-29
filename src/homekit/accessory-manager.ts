@@ -54,7 +54,7 @@ export class AccessoryManager {
   async start(showPairing = false): Promise<void> {
     // HAP-NodeJS emits listener errors asynchronously. Check ordinary port conflicts first.
     await new Promise<void>((resolve, reject) => {
-      const probe = createServer();
+      const probe = createServer((socket) => socket.destroy());
       probe.once('error', reject);
       probe.listen(this.config.homekit.port, () =>
         probe.close((error) => (error ? reject(error) : resolve())),

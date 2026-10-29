@@ -90,7 +90,7 @@ try {
   const root = join(temp, readdirSync(temp)[0]),
     node = join(root, 'runtime', 'node.exe'),
     entry = join(root, 'dist', 'index.js'),
-    data = join(temp, 'private-profile');
+    data = join(temp, 'private-profile-灯光');
   const runtime = JSON.parse(
     readFileSync(join(root, 'runtime', 'provenance.json'), 'utf8'),
   );
@@ -132,9 +132,26 @@ try {
     existsSync(join(data, 'application.lock'))
   )
     throw new Error('API shutdown left a lock');
+  child = spawn(
+    'cscript.exe',
+    [
+      '//nologo',
+      join(root, 'Launch-Bridge.vbs'),
+      '--profile',
+      data,
+      '--no-open',
+    ],
+    { windowsHide: true, stdio: 'ignore' },
+  );
+  session = await waitSession(data);
+  await api('quit', {});
+  await new Promise((r) => child.once('exit', r));
+  child = undefined;
   const { launcherScript } = await import('../dist/windows/startup.js');
   const launcher = join(temp, 'test-startup.vbs');
-  writeFileSync(launcher, launcherScript(node, entry, data));
+  writeFileSync(launcher, '\ufeff' + launcherScript(node, entry, data), {
+    encoding: 'utf16le',
+  });
   run('cscript.exe', ['//nologo', launcher]);
   session = await waitSession(data);
   await api('quit', {});
@@ -143,7 +160,7 @@ try {
   if (existsSync(join(data, 'application.lock')))
     throw new Error('Background launcher did not quit cleanly');
   console.log(
-    'Windows portable package verified: bundled runtime, private API, mock HAP startup, light commands, stop/start identity preservation, graceful quit, and hidden VBS startup launcher. Physical Windows sign-in/reboot remains manual.',
+    'Windows portable package verified: bundled runtime, private API, mock HAP startup, light commands, stop/start identity preservation, graceful quit, actual portable VBS entrypoint and hidden UTF-16 Startup launcher (Unicode profile). Physical Windows sign-in/reboot remains manual.',
   );
 } finally {
   if (session)

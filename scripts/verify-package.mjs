@@ -37,10 +37,18 @@ for (const suffix of [
     throw new Error(`Missing ${suffix}`);
 const temp = mkdtempSync(join(tmpdir(), 'rgb-unpack-'));
 function run(command, args, cwd) {
+  if (process.platform === 'win32' && command === 'npm') {
+    if (!process.env.npm_execpath)
+      throw new Error(
+        'Run package verification through npm run package:verify',
+      );
+    args = [process.env.npm_execpath, ...args];
+    command = process.execPath;
+  }
   const r = spawnSync(command, args, {
     cwd,
     encoding: 'utf8',
-    shell: process.platform === 'win32' && command === 'npm',
+    shell: false,
   });
   if (r.status !== 0)
     throw new Error(`Package check failed: ${command} ${args[0]}\n${r.stderr}`);
