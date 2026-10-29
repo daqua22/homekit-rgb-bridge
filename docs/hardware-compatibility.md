@@ -1,32 +1,23 @@
-# Hardware compatibility
+# Hardware compatibility and evidence
 
-Compatibility depends on the **specific model, controller, firmware, Windows build and OpenRGB version**. Detection in OpenRGB alone does not guarantee this bridge can control it.
+Compatibility depends on exact controller, firmware, motherboard and OpenRGB version. OpenRGB detection alone does not prove light control. The maintainer supplied the following observations during initial Windows testing; exact Windows build, firmware and motherboard/SMBus access details beyond those below were not supplied. No raw device serials or private stable hashes are published.
 
-V1 requires SDK protocol 3+ and a Direct mode with the per-LED-color flag, at least one LED and matching LED/color counts. The bridge lists zones but applies one color to all LEDs. Off is black, brightness is channel scaling, and neither is electrical power control. There is no independently verified hardware state readback.
+| Hardware                                           | Discovered layout                                              | Evidence / status                                                                                                                                              |
+| -------------------------------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Corsair Vengeance RGB DDR5, CMH32GX5M2E6000C36 kit | Two modules, 10 LEDs each                                      | **Physical color control verified by project maintainer** through the hardware bridge paired with Apple Home. OpenRGB 1.1 / SDK 6 / API 5 / Qt 6.8.3 reported. |
+| Corsair iCUE LINK System Hub                       | Three 8-LED RX RGB fan zones; one 20-LED TITAN 360 cooler zone | Discovered by SDK; physical control and independent-zone isolation unverified.                                                                                 |
+| Logitech G Pro Wireless                            | Two lighting zones                                             | Discovered by SDK; physical control and zone isolation unverified.                                                                                             |
+| Gigabyte B650 AORUS ELITE AX ICE                   | Two populated 1-LED zones; two zero-LED zones                  | Discovered by SDK; physical control unverified. Empty zones must remain disabled.                                                                              |
+| Virtual mock light / synthetic controllers         | Automated fixtures                                             | Software testing only; no physical hardware claim.                                                                                                             |
 
-Do not run OpenRGB alongside Corsair iCUE or other manufacturer RGB software during testing: conflicts can prevent access or overwrite effects. Never enable bus probing, drivers or zone resizing based on an assumption made by this bridge.
+**Only Corsair RAM color control and reported HomeKit pairing are hardware-verified here.** Brightness, software on/off, zone isolation, groups, reconnect, Windows reboot/sleep/wake and other devices remain physically unverified. The new release-candidate UI/distribution still needs an upgrade/fresh-desktop check even though prior bridge color control worked. Do not promote other rows based on CI or device enumeration.
 
-## Evidence categories
+The bridge reports software brightness and software black-as-off, never native power. Experimental zone eligibility requires a per-LED Direct mode, no entire-device-only flag, unique zone names and a complete LED partition. It does not certify firmware behavior. Zone packets preserve other LED ranges in software; physically validate before relying on isolation. Do not run iCUE or other manufacturer RGB writers simultaneously.
 
-| Status               | Meaning                                                                                   | Current entries                                                     |
-| -------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| Maintainer-verified  | Exact setup tested with the manual checklist and linked evidence reviewed by a maintainer | **None**                                                            |
-| Community-reported   | Contributor observed results; independent verification pending                            | **None yet**                                                        |
-| Untested             | No observed support claim                                                                 | All physical models until evidence is added                         |
-| Automated simulation | Mock adapter / synthetic TCP protocol fixtures                                            | Virtual RGB light; two-LED synthetic controller (not real hardware) |
+## Reporting process
 
-## Submit a report
+Use the [hardware issue form](https://github.com/daqua22/homekit-rgb-bridge/issues/new?template=hardware.yml). Include manufacturer, exact model/firmware, OpenRGB version, Windows build, Node/bundled-runtime version and bridge commit/version. Specify which features were actually observed: discovery, color, software off/on, brightness, pairing/restart, zones, groups and reconnect. Include known problems and competing software.
 
-Open [a hardware compatibility issue](https://github.com/daqua22/homekit-rgb-bridge/issues/new?template=hardware.yml). Include:
+Statuses are **maintainer-verified**, **community-reported** or **untested**. A reporter selecting “maintainer-verified” does not establish independent evidence; link reviewed checklist results. Add test date, exact environment and evidence link when available. Negative reports remain useful. Re-test after OpenRGB/firmware changes. Never attach setup PINs, QR codes, HAP files, raw serials or full private paths.
 
-- Manufacturer, exact device model and firmware, without raw serials.
-- OpenRGB version, Windows version/build, Node version and bridge commit/version.
-- Tested features: discovery, Direct mode, RGB colors, software on/off, software brightness, zones observed and multiple devices.
-- Apple Home pairing result and behavior after bridge/Windows restarts.
-- OpenRGB disconnect/reconnect, disappearance/reappearance and index-reorder behavior.
-- Known problems, conflicts, workarounds and checklist results.
-- Verification status: untested, community-reported, or maintainer-verified with a link to existing evidence.
-
-Use [manual-verification.md](manual-verification.md). Share only sanitized screenshots if they show real observed behavior; never include a setup code/QR, HAP storage, serials or full private paths. The reporter's dropdown selection alone cannot establish maintainer verification.
-
-Maintainers should add a row with manufacturer/model, exact versions, supported features, known problems, status, test date and issue/evidence link. Do not promote a community claim without reviewing repeatable evidence. Negative reports are useful and should remain visible. Re-test after firmware/OpenRGB changes; an old row is not universal support.
+Use [manual-verification.md](manual-verification.md); no checks outside the observed feature should be inferred from a successful color change.

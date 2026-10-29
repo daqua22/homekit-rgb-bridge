@@ -1,18 +1,20 @@
 # Apple Home pairing
 
-Physical Apple Home pairing is **unverified** for this project. HAP-NodeJS handlers and an authenticated local HAP endpoint are tested in software. This is not an Apple-certified accessory.
+The maintainer verified virtual-light pairing and hardware-bridge pairing, including physical Corsair RAM color changes. New candidate installation/upgrade and other hardware behavior remain subject to the manual checklist. This is not Apple-certified software.
 
-1. Put your PC and iPhone/iPad on the same trusted local network. Disable guest-network isolation; allow mDNS and the configured HAP TCP port. Ensure the PC stays awake.
-2. Initialize mock or hardware configuration and enable the intended devices.
-3. In a private, interactive terminal run `npm start -- start --pairing`. With an override directory append `--data-dir "C:\your\private\directory"`.
-4. Apple Home → **+ → Add Accessory**. Scan the terminal QR. Alternatively choose the available option for adding without a scan and enter the displayed eight-digit setup code. UI wording varies with iOS.
-5. If offered, acknowledge that the bridge is uncertified. Assign the discovered lights to rooms and test each separately.
-6. Stop with Ctrl+C, then restart with `npm start`. Confirm Home retains the pairing and desired controls.
+1. Keep the PC and iPhone/iPad on the same trusted LAN, with the PC awake. Permit HAP TCP and mDNS through your reviewed private-network firewall settings.
+2. Configure intended lights in the local panel and start the bridge. A newly installed bridge with no selected lights can be configured before publishing.
+3. Explicitly click **Reveal private pairing code & QR**. No setup code is included in the default dashboard, logs or launch arguments.
+4. Apple Home → **+ → Add Accessory**. Scan the QR or use the displayed setup code. Accept an uncertified-accessory prompt if offered; UI wording varies by iOS.
+5. Assign rooms and test each light. Hide the pairing information after use; switching away from the page also hides it.
+6. Stop/start using the dashboard, then verify pairing persists. A stopped bridge displays unknown pairing status until started.
 
-The bridge generates a random code, setup ID and local accessory identity for each data directory. HAP-NodeJS owns its long-term cryptographic keys and paired-controller data. Those files persist under `hap-storage` in the same private directory. No universal code is supplied. `--pairing` intentionally reveals credentials in the terminal; ordinary startup does not print them.
+The old `start --pairing` CLI remains supported and explicitly prints private setup credentials. Never record that terminal, upload its QR, or share identity/HAP files. Credentials are unique per private data directory. Keep the exact directory and unchanged whole-device IDs across upgrades to retain pairings. Merely reading a legacy profile does not reset it or change its HomeKit port.
 
-Keep the same directory, Windows account and device IDs across restarts/upgrades. A renamed accessory keeps its UUID. Enabling/disabling configured devices requires a bridge restart; removing a device may remove its Apple Home room/automation associations. Two separate data directories create separate bridges.
+Opting into new zone/group lights creates new accessories while keeping existing whole-device UUID seeds unchanged. Replacing a whole-device light may require reassigning rooms/automations; preserving a bridge pairing does not preserve associations for removed accessories. No automatic identity remapping occurs.
 
-If discovery fails, see [troubleshooting](troubleshooting.md). Do not erase pairing storage to fix a network problem. A deliberate factory reset requires removing the bridge from Apple Home, stopping all bridge processes, privately backing up data, then using a **new** empty data directory and pairing again. Old backups contain live credentials and must remain private.
+## Deliberate reset
 
-Pairing to one Home does not automatically grant another Home access. Siri remote control and automations depend on Apple's home hub and network behavior; this project has not verified those features.
+Use only when you intend to remove all pairings for this profile. First remove the bridge from Apple Home. In the local panel, expand Reset HomeKit pairing and type **RESET HOMEKIT PAIRING**. The app stops the bridge, creates a complete private backup, removes current identity/HAP storage, and requires Quit/reopen before generating fresh credentials. Configured selections and saved lighting states remain. This explicit reset is the only UI action that deliberately removes pairing keys.
+
+Do not reset to troubleshoot a firewall/SDK problem. Protect backups because they contain usable old credentials. No PIN or QR should appear in screenshots used for support. Remote Siri/automations depend on Apple's home hub/network behavior and have not been tested here.

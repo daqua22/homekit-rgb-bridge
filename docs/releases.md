@@ -1,26 +1,20 @@
-# Versioning and release process
+# Release review and publication
 
-Current package version: `0.1.0-dev.0`. **No version tag or public Release is created by the build.** Use semantic versioning. The first published preview should use tag `v0.1.0`, GitHub's **pre-release** flag and an explicit experimental title while hardware testing remains incomplete. Never describe a JavaScript archive as a standalone executable.
+Candidate package version: `0.1.0`; intended tag: `v0.1.0`; title: **HomeKit RGB Bridge v0.1.0 — Experimental Preview**. Semantic versioning applies. Version metadata alone is not publication or release completion.
 
-## Release gates
+**Do not publish or tag until the maintainer explicitly approves publication after reviewing the checks and limitations.** Both CI and the manual Release candidate review workflow use read-only repository permissions and only build/validate/upload artifacts. Ordinary commits cannot publish packages or releases. This implementation prepares a PR and draft notes, not a public Release.
 
-1. A clean checkout at the intended immutable commit passes `npm ci`, `npm run check`, `npm run format:check`, `npm run smoke`, `npm run licenses`, `npm run package:preview`, `npm run package:verify` and `npm audit --omit=dev`.
-2. GitHub CI is successful on Windows and Linux for the candidate commit. Verify the packaged runtime on Windows. A CI result is not a physical Windows reboot test.
-3. At least the mock Apple Home pairing/control/restart path is manually exercised before calling the preview ready for Apple Home use. Link the manual evidence. This gate is currently unmet, so no release is published by the initial implementation.
-4. Reconcile documentation with actual functionality and record unverified hardware/Windows startup scenarios explicitly. Hardware-incomplete releases must remain experimental/pre-release with no verified-model claim.
-5. Inspect tracked files and archive contents for secrets, pairing data, local configuration, raw serials and private paths. Review dependencies/notices after any version change.
-6. Review the exact distribution: compiled JavaScript, runtime lockfile, docs, notices and command launcher; no Node runtime, OpenRGB binary, native installer or `.exe`.
+## Mandatory candidate review
 
-When the gates pass, update version and changelog in a normal commit, rebuild from that clean commit, check archive content and calculate checksums. Review and explicitly authorize release publication. This repository's workflows do not create tags or publish releases/packages automatically.
+- Full lint, strict types, automated tests, build, formatting, HAP smoke, browser flow, license notices and runtime dependency audit pass from a clean checkout.
+- GitHub CI passes for the exact candidate revision on Windows/Linux Node 24/26; Windows x64 portable build/extracted-runtime/hidden-launcher checks pass. Download and compare SHA-256 from the same build.
+- Review existing-installation regression evidence: unchanged whole UUID seeds, identity/HAP files/ports; backed-up versioned config/state changes; deliberate-only reset. Never use a live profile in CI.
+- Review local API authentication/Host/Origin/CSP/body/rate limits, local file permissions, credential exposure, no persistent hardware-profile changes, runtime/dependency licenses and unresolved security issues. Do not approve with unresolved critical findings.
+- Review actual media and compatibility claims. Maintainer RAM color/pairing evidence is distinct from new candidate physical tests and synthetic zone/group checks.
+- Complete or explicitly accept the listed manual experimental limitations; fresh desktop install, real upgrade, zone/group behavior and lifecycle remain pending until observed. Do not claim a production-ready installer or fully verified hardware.
+- Review [draft notes](release-notes-v0.1.0.md), installation/upgrade/rollback/uninstall and the precise artifact contents.
+- Obtain explicit publication approval. No approval is inferred from successful CI or a request to prepare the release.
 
-## Notes required with each release
+If publication is later authorized, select the reviewed immutable revision, use normal non-force Git workflow, create `v0.1.0`, and publish the reviewed ZIP/checksum/notes with GitHub's **pre-release** flag. Record that GitHub confirmed publication before reporting success. Do not promote unreviewed rebuilt artifacts or silently move a tag.
 
-- Exact version/commit and experimental/pre-release status.
-- Implemented behavior, executed automated and manual checks, and exact tested hardware environments.
-- Known limitations and a prominent list of untested features/models.
-- Archive and `SHA256SUMS.txt`, plus checksum verification commands.
-- Node/OpenRGB prerequisites and [installation](installation-windows.md) steps.
-- Backup, upgrade, rollback and any configuration migration instructions.
-- Licensing and retained third-party notices.
-
-A maintainer may then use the GitHub release UI or `gh release create v0.1.0 <archive> <checksums> --prerelease --title "v0.1.0 — Experimental preview" --notes-file <reviewed-notes>` only after that authorization. No command in this guide should be read as an instruction to publish an unverified release.
+No code-signing certificate purchase, external purchase, automatic registry publication, firmware change, fan/pump control or driver bundling is part of this release.

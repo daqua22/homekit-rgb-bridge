@@ -1,41 +1,54 @@
-# Configuration
+# Configuration and migrations
 
-All runtime JSON lives in a private data directory, outside Git. Defaults: `%LOCALAPPDATA%\HomeKitRGBBridge` on Windows, `~/.homekit-rgb-bridge` on POSIX. Override with `--data-dir <path>` on every command. The program resolves paths but does not print them in default logs.
+Use the local control panel for normal configuration. JSON editing is an advanced/source workflow. Profiles live outside the application: `%LOCALAPPDATA%\HomeKitRGBBridge` by default on Windows and `~/.homekit-rgb-bridge` on POSIX. The launcher can select a different existing profile; every CLI command accepts `--data-dir <path>`.
 
-`init` writes a hardware configuration with no devices selected. `init --mock` selects the virtual light. Both refuse to overwrite an existing config. `check` validates config without starting networking. `list` connects and discovers without writing colors. `start` starts the persistent bridge; it is the default command. `--pairing` reveals private setup information only at startup. `--mock` is accepted only by `init`. `--help` lists syntax.
+## Version 1
+
+Legacy files without `version` load as version 1 in memory. No load operation overwrites them. Confirmed UI Save creates a full private backup first. A state write upgrades legacy state only after a backup; future versions are rejected. The bridge identity/HAP keys and existing whole-device state keys remain unchanged.
 
 ```json
 {
-  "adapter": "mock",
+  "version": 1,
+  "adapter": "openrgb",
+  "experimentalZones": false,
+  "admin": { "port": 8787 },
   "openrgb": { "host": "127.0.0.1", "port": 6742, "timeoutMs": 3000 },
   "homekit": { "name": "HomeKit RGB Bridge", "port": 51826 },
-  "devices": [
-    { "id": "mock:virtual-light", "name": "Virtual RGB Light", "enabled": true }
-  ],
+  "devices": [],
+  "groups": [],
   "connection": { "pollMs": 5000, "initialRetryMs": 1000, "maxRetryMs": 30000 },
   "logging": "info"
 }
 ```
 
-A copy is in [examples/config.mock.json](../examples/config.mock.json). Hardware config: set `adapter` to `openrgb`, begin with `devices: []`, run `list`, then copy the exact returned IDs. IDs shown in reports are hashes; never substitute OpenRGB's mutable numeric index. Device selection is read at startup, so stop before editing and restart afterward.
+Safe complete examples: [hardware](../examples/config.openrgb.json), [mock](../examples/config.mock.json). No real hardware identifiers or pairing credentials are included.
 
-| Setting                       | Validation / behavior                                                                                                                                                                                                     |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `adapter`                     | `mock` or `openrgb`; selected IDs must match the adapter                                                                                                                                                                  |
-| `openrgb.host`                | Only `127.0.0.1`, `localhost` or `::1`; no remote host                                                                                                                                                                    |
-| `openrgb.port`                | Integer 1–65535; default 6742                                                                                                                                                                                             |
-| `openrgb.timeoutMs`           | Integer 100–30000; connect/request timeout                                                                                                                                                                                |
-| `homekit.name`, device `name` | 1–64 ASCII letters/digits/spaces/apostrophes/hyphens; begin/end with a letter/digit                                                                                                                                       |
-| `homekit.port`                | Integer 1024–65535, default 51826; choose an unused port                                                                                                                                                                  |
-| `homekit.bind`                | Optional array of up to 16 interface names or addresses, passed to HAP-NodeJS; omitted advertises on available interfaces. HAP binding semantics may still use a wildcard TCP listener; use firewall rules for isolation. |
-| `devices`                     | Up to 100 unique IDs with `name` and boolean `enabled`; disabled devices are not exposed                                                                                                                                  |
-| `pollMs`                      | 1000–60000, inventory refresh interval                                                                                                                                                                                    |
-| `initialRetryMs`              | 100–60000; first failed-connection retry                                                                                                                                                                                  |
-| `maxRetryMs`                  | 100–300000 and at least initial; delays double to this cap                                                                                                                                                                |
-| `logging`                     | `error`, `info`, `debug`; fixed structured events, no color values or credentials                                                                                                                                         |
+## Select lights
 
-Unknown properties, duplicate IDs, invalid types and out-of-range values are rejected. There is no hot reload. JSON must be valid (no comments/trailing commas). Runtime JSON files are capped at 1 MiB when read.
+Devices & zones shows physical controllers, manufacturers, LED counts and capability limitations. Only opt in to intended devices. Whole-device selections retain the exact previous device ID. New zone IDs combine the stable controller ID with a hash of the unique zone name; duplicate names, unknown partitions, global-only modes and zero-LED zones are ineligible. Firmware may still violate inferred isolation: explicit experimental consent and physical validation are required.
 
-Other files: `identity.json` stores generated setup credentials; `hap-storage/` holds HAP-NodeJS keys/cache; `state.json` stores last transport-accepted desired on/hue/saturation/brightness; `bridge.lock` enforces one instance. Do not hand-edit identity or HAP storage. Files are replaced through same-directory temporary writes; this reduces partial writes but is not a transactional hardware+disk commit or a power-loss guarantee.
+Whole-device and zone lights cannot overlap. Each target can belong to only one enabled standalone light or enabled group. Groups have stable generated `group:` IDs and one or more physical/zone members. Enabling a group does not auto-enable its members as separate HomeKit accessories. Invalid overlapping selections are rejected without modifying the saved configuration.
 
-Software off preserves desired hue, saturation and brightness. Brightness zero is black and does not change the desired `on` boolean. Changes from other apps are not imported. If a hardware send succeeds but saving state fails, Home sees a communication error and disk retains the previous state; inspect disk access/space before trying again. If a write is uncertain, the bridge cannot verify physical output; reconnection restores the last saved desired state.
+A confirmed Save checks the loaded config revision to avoid overwriting external edits, stops a running bridge, backs up config/state/identity/HAP storage, saves and restarts if previously running. It does not silently choose new ports or device IDs. Changing backend through the UI clears old selections on the explicit save, because mock and hardware IDs are incompatible. Names must be 1–64 ASCII letters/digits/spaces/apostrophes/hyphens, beginning/ending with a letter or digit. Maximum 100 enabled HomeKit lights.
+
+## Settings
+
+- `adapter`: `mock` or `openrgb`; IDs must match the backend.
+- `openrgb.host`: loopback only (`127.0.0.1`, `localhost`, `::1`); port 1–65535; timeout 100–30000 ms.
+- `homekit.port`: 1024–65535, default 51826, user-selected values preserved. OpenRGB, HomeKit and preferred admin ports must differ.
+- `homekit.bind`: optional interface/address array (up to 16), preserved in upgrades. HAP-NodeJS may use a wildcard TCP listener even with interface filtering: use firewall isolation.
+- `admin.port`: preferred local panel port 1024–65535, default 8787. The UI does not change this field mid-session. Source users can use `app --admin-port <port>`; a busy preferred default falls back to a free loopback port.
+- `connection.pollMs`: 1000–60000; retry initial 100–60000 and maximum 100–300000, at least initial. Delays double to the cap.
+- `logging`: error/info/debug, fixed event names without configuration, color values or credentials.
+
+Unknown properties, duplicate IDs, invalid types/ranges and future versions fail validation. Config and state JSON reads are capped at 1 MiB. Files are atomically replaced through same-directory temporary files; this is not a transactional disk+hardware commit or power-loss durability guarantee.
+
+## State semantics
+
+On/off, hue, saturation and brightness represent last saved transport-accepted desired state. Off preserves hue/saturation/brightness and sends black. Brightness zero is black without changing desired `on`. Slider commands coalesce for 35 ms; every waiting caller receives the merged final transport result. Another RGB app's changes are not synchronized.
+
+A group applies members serially and records successfully accepted members; any failed member returns failure and identifies accepted/failed targets in diagnostics. There is no compensating rollback write. Group state is saved only after all members succeed. Physical output can remain partially changed after failure; reconciliation on later reconnect restores saved desired values. Disk-write failure after a send likewise means output may have changed despite a failed operation.
+
+## Private files
+
+`identity.json` and `hap-storage/` hold credentials; `state.json` holds versioned desired lights; `backups/` contains private migration/reset snapshots. `bridge.lock` protects older CLI interoperability and `application.lock/` provides heartbeat exclusion/recovery. `admin-session.json` and `open-control.html` are private launch handoffs, removed on graceful exit. Logs rotate at 256 KiB, retaining one previous file; the UI shows up to 100 recent fixed events. No runtime file belongs in Git or a public report.

@@ -1,41 +1,47 @@
 # Development
 
-Use a full source checkout, Node 24 (see `.nvmrc`) and npm. The CLI also accepts Node 22.15+ and 26; CI covers 24/26 on Windows/Linux. Install with `npm ci`; commit lockfile changes deliberately.
+Use Node 24 (see `.nvmrc`) and `npm ci`. Source scripts also support Node 22.15+ and 26; CI covers Windows/Linux with 24/26. Preserve the lockfile and review dependency/runtime licenses and vulnerabilities on changes.
 
 ```powershell
 npm ci
+npx playwright install chromium
 npm run check
 npm run format:check
 npm run smoke
+npm run test:browser
 npm run licenses
 npm run package:preview
 npm run package:verify
+# Windows x64:
+npm run package:windows
+npm run verify:windows
 ```
 
-`check`: ESLint → strict TypeScript check → Vitest → build. `smoke`: real HAP TCP endpoint requiring authentication, default-output credential checks, HAP file persistence and graceful restart on POSIX. On Windows the smoke stops after listener verification because Node's `child.kill()` is forced termination there. Real Ctrl+C/Task Scheduler reboot behavior remains manual.
+`check` runs ESLint, strict TypeScript, Vitest and the production build. `smoke` exercises a real HAP listener requiring authentication and default-output privacy; POSIX additionally checks signal shutdown/restart. Physical pairing is a separate maintainer report. `test:browser` walks Chromium → authenticated API → config/state → mock adapter → rendered UI, with private QR reveal/hide, identity-preserving restart, keyboard access and narrow layout checks. It captures mock-mode UI media only after hiding credentials. Test traces/videos are disabled to avoid recording private setup information.
 
-`package:preview` needs a successful build and notices first. It stages an explicit allowlist into a Windows Node `.tar.gz` archive and writes SHA256SUMS. `package:verify` checks its checksum/content, extracts to a fresh temporary directory, installs runtime dependencies with the lockfile and exercises help/init/check/mock list. It requires `tar`, available on current supported Windows 10/11 systems and Linux/macOS. No release upload occurs.
-
-`licenses` verifies an allowlist of reviewed license identifiers across all lockfile packages, rejects unknown licenses, inventories runtime packages and retains their license/notice text. Regenerated notices are committed. New dependency licenses require human review; the allowlist is not a substitute for reading additional terms.
+The thin `package:preview` requires separately installed Node/npm at runtime. The Windows-only `package:windows` downloads the official Node ZIP pinned by `distribution-runtime.json`, verifies SHA-256, retains its license, installs only locked production dependencies into a staging directory and produces a portable ZIP/checksum. `verify:windows` extracts it, uses the **bundled** runtime without npm, starts a real mock HAP bridge, exercises private APIs/light state, checks restart identity preservation and clean lock removal, and runs a hidden VBS startup launcher via Windows Script Host. It does not certify actual desktop sign-in, Windows reboot, hardware output or SmartScreen behavior.
 
 ## Structure
 
 ```text
-src/adapters/    adapter boundary, mock and bounded OpenRGB TCP implementation
-src/homekit/    HAP bridge and light characteristic handlers
-src/devices/    desired state, serialized commands and reconnect loop
-src/config/     schema, private paths, identity, lock and state store
-src/utils/      HSV/RGB math and fixed-event logger
-src/index.ts    CLI composition and shutdown
-scripts/        smoke, notices, packaging and archive verification
-examples/       safe mock/hardware configurations without credentials
-tests/          conversion, config, manager, HAP handlers and synthetic SDK TCP tests
-.github/        least-privilege CI and contribution forms
-docs/           operation, design, evidence and release process
+src/adapters/   independently implemented OpenRGB TCP subset + mock backend
+src/homekit/   bridge, stable UUIDs, HAP characteristics
+src/devices/   target/group mapping, coalescing, serialized writes and reconnect
+src/config/    versioned schema/state, backups, identity and heartbeat/legacy lock
+src/app/       local HTTP security, controller lifecycle and launch handoff
+src/windows/   scoped per-user Startup launcher generation
+public/        accessible vanilla browser UI (no cloud or framework runtime)
+scripts/       smoke, notices, thin/portable package generation and verification
+tests/         unit/integration/TCP security and release regression coverage
+tests/e2e/     Playwright browser flow against an isolated private profile
 ```
 
-For local mock development, use `npm run dev -- init --mock --data-dir <private-dir>` and `npm run dev -- start --data-dir <same-dir>`. Do not initialize inside the checkout. HAP storage is process-global; tests that publish independent bridges should use separate Node processes. Protocol fixtures are synthetic, not imported OpenRGB code or hardware captures.
+For local operation run `npm run app`, or `npm start -- app --open --data-dir <private-profile>`. Do not initialize inside the checkout or use a live hardware profile in tests. HAP storage is process-global; separate profile tests that publish bridges use separate processes. Synthetic SDK fixtures are not hardware captures or copied OpenRGB implementation.
 
-Adapters must never pretend to confirm hardware output. Reject invalid data, report capabilities, preserve stable identity and invalidate stale device routing. Add meaningful behavior tests for the change rather than implementation-mirroring assertions. Keep network operations serialized and shutdown bounded. Do not add custom bus/USB drivers, telemetry or iCUE support in V1.
+## Change discipline
 
-CI installs from the lockfile, validates formatting/lint/types/tests/build, reviews licenses, checks runtime audit and verifies preview packaging. It uploads CI artifacts only on manually dispatched runs requesting them. No workflow can publish an npm package, GitHub Release or tag. See [release gates](releases.md) before distribution.
+Preserve legacy UUID seeds, device IDs, identity.json, HAP paths and user-selected ports. Add a regression before changing their formats. Migrations read in memory and back up before an explicitly confirmed config save; never silently reset a failed load. Future schema versions fail closed. New zones/groups get new stable IDs; replacing whole-device lights has an explicit Home association impact.
+
+Keep adapters free of HAP/UI concerns. Never infer physical acknowledgment from a socket write. Require capability/layout checks, reject overlapping targets, preserve other LED ranges, serialize commands and report partial group failures. No SMBus/USB/fan/pump/firmware APIs belong here. Browser changes need keyboard/contrast/scaling checks and safe text-only dynamic rendering.
+
+CI uses immutable action SHAs and read-only repository permissions. It audits runtime dependencies, checks generated notices, tests browser flow, builds/validates Windows packaging and uploads review artifacts. The manual release-candidate workflow also only builds/validates/uploads notes/artifacts. Neither workflow can publish a Release or package. See [releases](releases.md) for approval gates.

@@ -1,11 +1,20 @@
 # Changelog
 
-## Unreleased — 0.1.0-dev.0
+## 0.1.0 — Experimental release candidate (unreleased)
 
-- Standalone HAP-NodeJS bridge with per-device light handlers and an injectable RGB backend.
-- Mock RGB adapter, bounded OpenRGB protocol-3 adapter and explicit Direct-mode compatibility checks.
-- Per-install credentials, private HAP storage, configuration/state persistence and reconnect handling.
-- Automated conversion/configuration/manager/HAP/protocol tests and runtime/package smoke checks.
-- Windows Node preview packaging, checksums, least-privilege CI and public contribution/reporting process.
+- Add a protected local browser configuration panel with dashboard, discovery/selection/naming, groups, bridge lifecycle, explicit pairing reveal/reset and diagnostics.
+- Add opt-in experimental zones using validated per-LED ranges, stable zone identities, preserved unrelated color bytes and zero/ambiguous/global-only rejection.
+- Add logical group failure reporting and 35 ms slider coalescing with final desired-state preservation.
+- Preserve legacy whole-device identity/HAP storage/user ports and add backed-up versioned config/state migration.
+- Add recoverable heartbeat locking and hidden user-level Windows Startup launchers.
+- Prepare a Windows x64 portable package with a checksum-pinned official Node runtime, production dependencies, license retention and extracted-runtime/background-launch smoke checks.
+- Expand unit/integration/security/browser/regression/packaging verification and read-only CI review artifacts.
+- Record maintainer-verified virtual/hardware pairing and Corsair Vengeance RGB DDR5 physical color control; other discovered controllers and physical zone/group/brightness/off/recovery remain unverified.
 
-Apple Home pairing, real RGB hardware and Windows reboot/autostart still require manual validation. No tagged release yet.
+No tag or GitHub Release is published without explicit maintainer approval. See draft notes and manual gates.
+
+## 0.1.0-dev.0 — Initial public prototype
+
+- Standalone HAP-NodeJS bridge, mock backend and bounded OpenRGB protocol-3 adapter.
+- Private per-install credentials, desired-state persistence, stable IDs and reconnect handling.
+- Original 43 automated tests, Windows/Linux CI, thin Node preview packaging and public contribution process.

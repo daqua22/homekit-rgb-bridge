@@ -1,15 +1,16 @@
 # Getting started
 
-HomeKit RGB Bridge is an experimental CLI for an awake Windows PC. It translates Apple Home light commands into local OpenRGB updates. A mock mode lets you evaluate the HomeKit side without hardware. No Apple Home or physical RGB verification has been completed by this project yet.
+Use the Windows portable candidate for installation without npm or JSON editing. It includes the Node runtime, dependencies, browser control panel and launcher. Release publication is pending approval; review artifacts live in successful GitHub Actions runs.
 
-1. Install a supported Node.js runtime (Node 24 recommended) and Git, then follow [Windows installation](installation-windows.md).
-2. Clone the repository, run `npm ci` and `npm run build`.
-3. Run `npm start -- init --mock`, then `npm start -- list`.
-4. In a private terminal, run `npm start -- start --pairing`.
-5. Follow [Apple Home pairing](apple-home-pairing.md). Mock commands update an in-memory simulated light, not your PC hardware. Set `logging` to `debug` to see fixed `light_command_sent` events.
-6. Stop with Ctrl+C; start again with `npm start`. Keep the data directory to retain identity, HAP keys and last desired light state.
-7. For hardware, set up [OpenRGB](openrgb-setup.md) and use a separate data directory with `init` (without `--mock`). Discover IDs with `list`, opt in through [configuration](configuration.md), validate with `check`, then start.
+1. Follow [Windows installation](installation-windows.md), verify checksums and extract the full ZIP.
+2. Start `Launch-Bridge.vbs`. Choose your private profile folder. **Existing users must select their exact existing data directory**, preserving pairing and state. Do not select the application/extraction directory.
+3. OpenRGB must detect devices first. For Corsair RGB RAM, install the official signed PawnIO driver and run OpenRGB with the permissions required by its documentation. Close iCUE and competing RGB tools. Start the local SDK server.
+4. In Settings, choose OpenRGB; save the confirmed change. Discover devices, select the intended whole controllers and give them HomeKit names. Confirm and save again.
+5. Start the bridge and reveal private pairing information only when needed. Add it in Apple Home; see [pairing](apple-home-pairing.md).
+6. Test each device. New lights start with desired software off (black). Enable sign-in startup if wanted. Closing the browser leaves the process running; use Quit application to exit cleanly.
 
-Do not run the same data directory in two processes. Do not share QR/setup information. The app does not control hardware until you enable devices and start it; new selected lights start at software off (black).
+For mock mode, choose the mock backend, save, discover the virtual light, enable it and save. It simulates color updates and never controls hardware.
 
-Use [troubleshooting](troubleshooting.md) if the accessory is missing, and record actual results with the [manual checklist](manual-verification.md). Reaching a listening TCP port alone does not prove discovery or pairing from an iPhone.
+Zones and groups are optional. Read [configuration](configuration.md) before enabling experimental zones; only eligible LED layouts are selectable. Group members cannot overlap enabled standalone lights or other enabled groups. Commands may partially apply when a member fails; diagnostics show the outcome.
+
+The maintainer confirmed physical Corsair RAM color changes on the previous prototype. New UI/zone/group/Windows-startup features need the [manual checklist](manual-verification.md) before broad claims. No additional hardware, Homebridge, cloud account or telemetry is required.
