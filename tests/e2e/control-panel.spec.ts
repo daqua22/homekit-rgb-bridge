@@ -10,6 +10,7 @@ import {
 } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
+import { pathToFileURL } from 'node:url';
 import { createServer } from 'node:net';
 import { setTimeout as delay } from 'node:timers/promises';
 let child: ChildProcess,
@@ -79,12 +80,28 @@ test.afterAll(async () => {
   if (child?.exitCode === null) child.kill('SIGKILL');
   if (dir) rmSync(dir, { recursive: true, force: true });
 });
+test('local launcher handoff opens the authenticated dashboard', async ({
+  page,
+}) => {
+  const navigation = page.waitForResponse(
+    (response) =>
+      response.request().isNavigationRequest() &&
+      response.url().startsWith(session.origin + '/'),
+  );
+  await page.goto(pathToFileURL(join(dir, 'open-control.html')).href);
+  const response = await navigation;
+  expect(response.status()).toBe(200);
+  const headers = await response.request().allHeaders();
+  expect(headers['sec-fetch-site']).toBe('cross-site');
+  await expect(page.locator('#dashboard')).toContainText('Running');
+  expect(new URL(page.url()).hash.length).toBe(0);
+});
 test('browser → authenticated API → persisted config/state → mock adapter → UI', async ({
   page,
 }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
-  await page.goto(session.origin + '/#token=' + session.token);
+  await page.goto(pathToFileURL(join(dir, 'open-control.html')).href);
   await expect(
     page.getByRole('heading', { name: 'HomeKit RGB Bridge', exact: true }),
   ).toBeVisible();

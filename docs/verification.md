@@ -14,8 +14,8 @@ The baseline before this change is recorded in [release-baseline.md](release-bas
 - Actual HAP characteristic handlers, offline status and a real authenticated HAP listener; local advertisement completion is awaited, not assumed from a port alone.
 - Synthetic SDK version negotiation (including a server advertising 6 receiving protocol-3 requests), fragmentation, index reorder, inventory invalidation, timeouts, malformed layouts and reconnect.
 - Heartbeat stale-lock recovery and live legacy PID refusal; user-scoped Windows Startup launcher generation.
-- Local admin bearer authentication, same-origin restrictions, asset allowlist, CSP/no-store, request validation/body limits, explicit save/reset consent and dashboard credential exclusion.
-- Chromium → protected API → config/state → mock adapter → UI, private pairing reveal/hide, identity-preserving stop/start, responsive width and keyboard focus. The captured screenshot is actual mock-mode UI, not a hardware demonstration.
+- Local admin bearer authentication, exact Host/Origin validation, cross-site API/subresource/frame denial while allowing only the launcher’s top-level static document navigation, asset allowlist, CSP/no-store, request validation/body limits, explicit save/reset consent and dashboard credential exclusion.
+- Actual private `file://` launcher handoff → Chromium → protected API → config/state → mock adapter → UI, private pairing reveal/hide, identity-preserving stop/start, responsive width and keyboard focus. The captured screenshot is actual mock-mode UI, not a hardware demonstration.
 - Thin archive checksums/allowlist/extracted dependency install and CLI checks.
 - Windows x64 portable archive: official runtime checksum, bundled Node execution, extracted application startup/API/mock light, identity-preserving restart, graceful quit/lock release and hidden VBS launch. No system npm is used to operate that extracted package.
 - Locked dependency license review, retained notices and npm runtime audit. Node runtime provenance/license is retained separately.

@@ -67,10 +67,18 @@ export async function startAdmin(
       'Content-Security-Policy',
       "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
     );
+    const path = req.url ?? '/';
+    // The private file:// handoff produces a cross-site top-level navigation.
+    // Only the static shell can enter this way; API and subresource checks stay strict.
+    const shellNavigation =
+      req.method === 'GET' &&
+      path === '/' &&
+      req.headers['sec-fetch-mode'] === 'navigate' &&
+      req.headers['sec-fetch-dest'] === 'document';
     if (
       req.headers.host !== origin.slice(7) ||
       (req.headers.origin !== undefined && req.headers.origin !== origin) ||
-      req.headers['sec-fetch-site'] === 'cross-site'
+      (req.headers['sec-fetch-site'] === 'cross-site' && !shellNavigation)
     ) {
       respond(res, 403, { error: 'Untrusted request origin or host' });
       return;
@@ -83,7 +91,6 @@ export async function startAdmin(
       respond(res, 429, { error: 'Too many requests' });
       return;
     }
-    const path = req.url ?? '/';
     if (req.method === 'GET' && path === '/favicon.ico') {
       res.writeHead(204);
       res.end();

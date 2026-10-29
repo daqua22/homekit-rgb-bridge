@@ -2,6 +2,7 @@
 
 ## 0.1.0 — Experimental release candidate (unreleased)
 
+- Fix the portable launcher’s file-to-browser navigation being rejected as cross-site; retain strict API/Host/Origin checks and cover the actual private handoff in browser tests.
 - Add a protected local browser configuration panel with dashboard, discovery/selection/naming, groups, bridge lifecycle, explicit pairing reveal/reset and diagnostics.
 - Add opt-in experimental zones using validated per-LED ranges, stable zone identities, preserved unrelated color bytes and zero/ambiguous/global-only rejection.
 - Add logical group failure reporting and 35 ms slider coalescing with final desired-state preservation.

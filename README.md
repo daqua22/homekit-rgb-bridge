@@ -80,7 +80,7 @@ npm run package:windows
 npm run verify:windows
 ```
 
-Install Chromium once with `npx playwright install chromium` for browser checks. CI validates Windows/Linux with Node 24/26, browser flows on Linux, and an extracted Windows package using the bundled runtime and hidden launcher. No workflow publishes a release from ordinary commits. See [development](docs/development.md) and [verification](docs/verification.md).
+Install Chromium once with `npx playwright install chromium` for browser checks. CI validates Windows/Linux with Node 24/26, browser flows on Windows and Linux, and an extracted Windows package using the bundled runtime and hidden launcher. No workflow publishes a release from ordinary commits. See [development](docs/development.md) and [verification](docs/verification.md).
 
 ## Documentation
 

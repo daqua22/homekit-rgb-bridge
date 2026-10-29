@@ -40,7 +40,9 @@ jobs:
       - run: npm run package:verify
       - if: matrix.os == 'ubuntu-latest' && matrix.node == 24
         run: npx playwright install --with-deps chromium
-      - if: matrix.os == 'ubuntu-latest' && matrix.node == 24
+      - if: matrix.os == 'windows-latest' && matrix.node == 24
+        run: npx playwright install chromium
+      - if: matrix.node == 24
         run: npm run test:browser
       - if: matrix.os == 'windows-latest' && matrix.node == 24
         run: npm run package:windows

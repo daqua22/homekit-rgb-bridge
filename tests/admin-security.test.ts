@@ -10,6 +10,7 @@ import {
 } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { request } from 'node:http';
 import { initialize } from '../src/config/config-manager.js';
 import { AppController } from '../src/app/controller.js';
 import { startAdmin } from '../src/app/server.js';
@@ -56,6 +57,54 @@ it('serves only explicit assets with restrictive security headers', async () => 
   );
   expect(response.headers.get('Cache-Control')).toBe('no-store');
   expect((await fetch(admin.origin + '/../package.json')).status).toBe(401);
+});
+it('allows the launcher document navigation while retaining origin, host and API protection', async () => {
+  const { admin } = await setup();
+  const navigation = {
+    'Sec-Fetch-Site': 'cross-site',
+    'Sec-Fetch-Mode': 'navigate',
+    'Sec-Fetch-Dest': 'document',
+  };
+  async function raw(
+    path: string,
+    method = 'GET',
+    extra: Record<string, string> = {},
+  ) {
+    return new Promise<number | undefined>((resolve, reject) => {
+      const req = request(
+        admin.origin + path,
+        { method, headers: { ...navigation, ...extra } },
+        (res) => {
+          res.resume();
+          res.on('end', () => resolve(res.statusCode));
+        },
+      );
+      req.on('error', reject);
+      req.end();
+    });
+  }
+  expect(await raw('/')).toBe(200);
+  for (const path of ['/api/status', '/api/logs', '/app.js', '/style.css'])
+    expect(await raw(path)).toBe(403);
+  expect(await raw('/', 'POST')).toBe(403);
+  expect(await raw('/', 'GET', { 'Sec-Fetch-Mode': 'cors' })).toBe(403);
+  expect(await raw('/', 'GET', { 'Sec-Fetch-Dest': 'iframe' })).toBe(403);
+  expect(await raw('/', 'GET', { Host: 'attacker.example' })).toBe(403);
+  for (const Origin of ['null', 'https://attacker.example']) {
+    expect(await raw('/', 'GET', { Origin })).toBe(403);
+    expect(
+      await raw('/api/status', 'GET', {
+        Origin,
+        Authorization: 'Bearer ' + admin.token,
+      }),
+    ).toBe(403);
+  }
+  expect(
+    await raw('/api/stop', 'POST', {
+      Origin: admin.origin,
+      Authorization: 'Bearer ' + admin.token,
+    }),
+  ).toBe(403);
 });
 it('requires a matching revision and explicit save consent, creates a backup and rejects unsupported config versions', async () => {
   const { controller, dir } = await setup();
@@ -124,7 +173,6 @@ it('rejects malformed/oversized admin bodies and denies preflight without CORS p
 });
 it('rejects a rebound Host header even with a valid local bearer', async () => {
   const { admin } = await setup();
-  const { request } = await import('node:http');
   const status = await new Promise<number | undefined>((resolve, reject) => {
     const req = request(
       admin.origin + '/api/status',

@@ -4,7 +4,9 @@ This is an experimental v0.1.0 candidate. No stable-support or response-time SLA
 
 ## Administrative interface
 
-The control panel binds only `127.0.0.1`. Every API requires a random 256-bit bearer credential; there are no authenticated cookies or anonymous configuration APIs. Exact Host/Origin validation, cross-site rejection, no CORS permission, bounded JSON bodies, rate/time/header limits, an asset allowlist, CSP/frame restrictions, no-store and no-referrer headers address browser-origin/DNS-rebinding risks.
+The control panel binds only `127.0.0.1`. Every API requires a random 256-bit bearer credential; there are no authenticated cookies or anonymous configuration APIs. Exact Host/Origin validation, cross-site API/subresource rejection, no CORS permission, bounded JSON bodies, rate/time/header limits, an asset allowlist, CSP/frame restrictions, no-store and no-referrer headers address browser-origin/DNS-rebinding risks.
+
+A top-level `GET /` with Fetch Metadata `navigate`/`document` may load the static shell from the private `file://` handoff, even when marked cross-site. Exact Host and supplied Origin checks still apply. This exception serves no profile data, does not authenticate a session and never applies to API routes, scripts, styles or frames. See the [Fetch Metadata definitions](https://www.w3.org/TR/fetch-metadata/).
 
 A private `admin-session.json` and `open-control.html` handoff in the profile allow reopening the running panel. The launch token goes in a URL fragment, is immediately removed from the URL, and is kept in tab session storage. It is never put in process arguments, ordinary logs, Git or package artifacts. An authenticated local UI can view the profile path/config and request pairing information; do not share the screen or handoff files. Any process running as the same Windows user can access this unencrypted local data; this is not isolation from a compromised account, malicious local browser extensions or administrators.
 
