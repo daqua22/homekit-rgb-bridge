@@ -11,6 +11,7 @@ import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { listPackage } from '@electron/asar';
+import { pathToFileURL } from 'node:url';
 if (process.platform !== 'win32' || process.arch !== 'x64')
   throw new Error('Verify this installer on Windows x64.');
 const output = resolve('artifacts/desktop');
@@ -67,6 +68,31 @@ try {
   )
     throw new Error('Silent per-user installer smoke failed');
   installed = true;
+  const backendEntry = join(
+    destination,
+    'resources',
+    'bridge',
+    'dist',
+    'desktop',
+    'bridge.js',
+  );
+  const importCheck = spawnSync(
+    join(destination, 'resources', 'runtime', 'node.exe'),
+    [
+      '--input-type=module',
+      '-e',
+      'await import(' + JSON.stringify(pathToFileURL(backendEntry).href) + ')',
+    ],
+    { encoding: 'utf8', timeout: 15000 },
+  );
+  if (importCheck.status !== 0) {
+    console.error(
+      'Installed backend import failure:\n' +
+        (importCheck.stderr || '').replaceAll(destination, '<installed-app>'),
+    );
+    throw new Error('Installed Node backend module preflight failed');
+  }
+  console.log('Installed official Node backend imports verified.');
   const test = spawnSync(
     process.execPath,
     [process.env.npm_execpath, 'run', 'test:desktop'],

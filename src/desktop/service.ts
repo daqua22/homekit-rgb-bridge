@@ -1,6 +1,7 @@
 import { fork } from 'node:child_process';
 import { z } from 'zod';
 import { setTimeout as delay } from 'node:timers/promises';
+import { basename } from 'node:path';
 export async function startDesktopService(options: {
   entry: string;
   node: string;
@@ -27,9 +28,25 @@ export async function startDesktopService(options: {
     const text = bytes.toString('utf8');
     if (/bad option:|not allowed in NODE_OPTIONS/.test(text))
       options.diagnostic?.('desktop_node_invalid_option');
-    else if (/MODULE_NOT_FOUND|Cannot find (module|package)/.test(text))
+    else if (/MODULE_NOT_FOUND|Cannot find (module|package)/.test(text)) {
       options.diagnostic?.('desktop_node_missing_module');
-    else if (/chacha20-poly1305/.test(text))
+      const missing = text.match(
+        /Cannot find (?:module|package) ['"]([^'"]+)['"]/,
+      );
+      if (missing) {
+        const name = basename(missing[1]!.replaceAll('\\', '/'));
+        const known: Record<string, string> = {
+          'bridge.js': 'desktop_node_missing_entry',
+          'loader.js': 'desktop_node_missing_loader',
+          zod: 'desktop_node_missing_zod',
+          'proper-lockfile': 'desktop_node_missing_lockfile',
+          'hap-nodejs': 'desktop_node_missing_hap',
+        };
+        options.diagnostic?.(
+          known[name] ?? 'desktop_node_missing_other_dependency',
+        );
+      }
+    } else if (/chacha20-poly1305/.test(text))
       options.diagnostic?.('desktop_node_crypto_unavailable');
     else if (/ERR_|Error:/.test(text))
       options.diagnostic?.('desktop_node_startup_error');
