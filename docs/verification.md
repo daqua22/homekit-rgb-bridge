@@ -22,6 +22,12 @@ The baseline before this change is recorded in [release-baseline.md](release-bas
 
 The verification skill's full-story flow is applied to the control panel: browser action → authenticated request → controller/schema → backup/config/state or adapter → response → rendered UI. Browser errors and first broken boundaries are fixed before continuing. No environment secrets or cloud services are required.
 
+## V2 desktop scope
+
+The desktop baseline was e6a9775: 65 tests and three browser checks passed before changes. New regressions first reproduced empty-bridge publication and stale mock discovery. Current automated scope adds four desktop preference/argument/origin tests the two setup regressions and asynchronous startup acknowledgment/failure coverage. Three Electron checks cover actual UI → official Node sidecar → synthetic SDK (advertising protocol 6) → HAP → backed-up config/identity, color bytes, private QR reveal/hide, renderer sandbox/context isolation, blocked navigation, setup completion and tray hiding. The local host is macOS; only the exact Windows CI result establishes installed Windows execution.
+
+Desktop Windows verification installs the built NSIS EXE, launches that installed application with synthetic controllers/private profiles, toggles the real per-user login registration, validates notices and private-file exclusions, and uninstalls. A marker outside the installation is checked, but that sentinel is not a complete real-user migration/uninstall test. Public Release approval, physical Apple Home confirmation and desktop lifecycle behavior remain separate gates.
+
 ## Remaining manual scope
 
 Fresh Windows 10/11 desktop installation, actual existing-profile upgrade, SmartScreen/Script Host policy, NTFS access review, sign-in/logout/reboot/sleep/wake, physical zone/group isolation, other controllers and candidate-specific Apple Home checks remain manual. All pending items are listed in [manual-verification.md](manual-verification.md). Do not call the release complete merely because CI passes.

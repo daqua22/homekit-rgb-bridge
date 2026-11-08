@@ -1,5 +1,9 @@
 # Getting started
 
+**V2 desktop users:** follow [EXE installation and guided setup](desktop-v2.md). It replaces the browser/launcher steps below with a desktop window and system tray, while retaining the same private profiles.
+
+## Legacy portable / source browser panel
+
 Use the Windows portable candidate for installation without npm or JSON editing. It includes the Node runtime, dependencies, browser control panel and launcher. Release publication is pending approval; review artifacts live in successful GitHub Actions runs.
 
 1. Follow [Windows installation](installation-windows.md), verify checksums and extract the full ZIP.

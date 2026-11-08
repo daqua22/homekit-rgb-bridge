@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0 — V2 desktop experimental candidate (unreleased)
+
+- Add a per-user Windows EXE installer, shortcuts, sandboxed Electron interface, system tray and optional quiet startup at sign-in.
+- Run HAP under a bundled official Node sidecar to retain required HomeKit crypto; no system Node is needed.
+- Add guided real-hardware setup, device names/color presets, private pairing guidance and remembered desktop settings.
+- Preserve existing profile/identity/ports/state with explicit profile selection and old-panel takeover.
+- Optionally launch a selected installed OpenRGB when its SDK is unavailable; no driver installation or elevation.
+- Prevent empty HomeKit bridge publication and clear stale discovery after switching backends.
+- Add native desktop/installed-EXE tests and installer/login/uninstall CI review artifacts. Physical hardware/reboot/sleep checks remain separate.
+
 ## 0.1.0 — Experimental release candidate (unreleased)
 
 - Fix the portable launcher’s file-to-browser navigation being rejected as cross-site; retain strict API/Host/Origin checks and cover the actual private handoff in browser tests.

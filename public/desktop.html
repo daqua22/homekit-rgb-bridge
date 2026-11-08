@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>HomeKit RGB Bridge</title>
+    <link rel="stylesheet" href="/desktop.css" />
+    <script src="/desktop.js" defer></script>
+  </head>
+  <body>
+    <aside class="sidebar">
+      <a class="brand" href="#overview"
+        ><span class="brand-mark" aria-hidden="true">H</span
+        ><span>HomeKit<br /><strong>RGB Bridge</strong></span></a
+      >
+      <p class="nav-caption">YOUR LIGHTING</p>
+      <nav aria-label="Main navigation">
+        <button
+          data-view="overview"
+          class="nav-item active"
+          aria-current="page"
+        >
+          <span aria-hidden="true">◈</span> Overview
+        </button>
+        <button data-view="devices" class="nav-item">
+          <span aria-hidden="true">▦</span> RGB devices
+          <span id="nav-count" class="nav-count">0</span>
+        </button>
+        <button data-view="home" class="nav-item">
+          <span aria-hidden="true">⌂</span> Apple Home
+        </button>
+        <button data-view="settings" class="nav-item">
+          <span aria-hidden="true">⚙</span> Settings
+        </button>
+      </nav>
+      <div class="sidebar-bottom">
+        <span class="local-dot"></span> Everything stays on your PC
+        <p>No accounts. No cloud. Just light.</p>
+        <small id="app-version">v0.2.0 · Experimental</small>
+      </div>
+    </aside>
+    <main>
+      <header class="topbar">
+        <div>
+          <span class="eyebrow">DESKTOP EDITION</span>
+          <p id="page-caption">Your lighting, at a glance.</p>
+        </div>
+        <span id="backend-badge" class="badge">Checking connection</span>
+      </header>
+      <p id="notice" class="notice" role="status" aria-live="polite" hidden></p>
+      <div id="demo-banner" class="banner" hidden>
+        <div>
+          <strong>You’re viewing a virtual demo light.</strong>
+          <p>
+            Switch to OpenRGB to discover your actual RAM, fans and other
+            lighting.
+          </p>
+        </div>
+        <button id="use-hardware">Set up real hardware</button>
+      </div>
+      <div id="profile-banner" class="banner" hidden>
+        <div>
+          <strong>Keep your existing HomeKit pairing</strong>
+          <p>
+            Existing bridge profiles were found. Open the profile already paired
+            with Apple Home before choosing your lights.
+          </p>
+        </div>
+        <button id="open-previous-profile">Open existing profile</button>
+      </div>
+      <section id="view-overview" class="view">
+        <div class="page-heading">
+          <div>
+            <h1>Your PC. In Apple Home.</h1>
+            <p>Bring all your compatible RGB lighting together.</p>
+          </div>
+          <span id="bridge-status" class="status-pill">Stopped</span>
+        </div>
+        <div class="metrics">
+          <article>
+            <span>Lighting connection</span
+            ><strong id="connection-status">Not connected</strong
+            ><small id="connection-detail"
+              >OpenRGB runs locally on your PC.</small
+            >
+          </article>
+          <article>
+            <span>Selected lights</span><strong id="light-count">0</strong
+            ><small>Selected devices and groups</small>
+          </article>
+          <article>
+            <span>HomeKit pairing</span
+            ><strong id="pair-status">Not running</strong
+            ><small id="pair-detail"
+              >Your pairing stays with your profile.</small
+            >
+          </article>
+        </div>
+        <article id="setup-card" class="card setup-card">
+          <div class="section-title">
+            <div>
+              <span class="eyebrow">LET’S GET CONNECTED</span>
+              <h2>Three steps to your first light</h2>
+            </div>
+            <span id="setup-progress" class="badge">0 of 3</span>
+          </div>
+          <ol class="setup-steps">
+            <li id="step-connect">
+              <span class="step-number">1</span>
+              <div>
+                <strong>Connect OpenRGB</strong>
+                <p>
+                  Make sure OpenRGB sees your hardware and its SDK Server is
+                  running.
+                </p>
+                <button id="setup-connect">Connect & discover</button>
+              </div>
+            </li>
+            <li id="step-select">
+              <span class="step-number">2</span>
+              <div>
+                <strong>Choose your lights</strong>
+                <p>
+                  Select the devices you want in Apple Home. Give each one a
+                  familiar name.
+                </p>
+                <button class="secondary" data-go="devices">
+                  Choose lights
+                </button>
+              </div>
+            </li>
+            <li id="step-pair">
+              <span class="step-number">3</span>
+              <div>
+                <strong>Add to Apple Home</strong>
+                <p>Start the bridge, then reveal your private setup code.</p>
+                <button class="secondary" data-go="home">
+                  Set up Apple Home
+                </button>
+              </div>
+            </li>
+          </ol>
+          <div class="setup-finish">
+            <label
+              ><input id="setup-startup" type="checkbox" checked /> Start
+              quietly when I sign in to Windows</label
+            ><button id="finish-setup" disabled>Finish setup</button>
+          </div>
+        </article>
+        <div class="section-title">
+          <div>
+            <h2>Your lights</h2>
+            <p>Try a color here, then control it from Apple Home.</p>
+          </div>
+          <div class="button-row">
+            <button id="start-bridge">Start bridge</button
+            ><button id="stop-bridge" class="secondary">Stop bridge</button>
+          </div>
+        </div>
+        <div id="lights-grid" class="lights-grid"></div>
+        <p id="no-lights" class="empty-state">
+          Your lights will appear here. Connect OpenRGB and choose a device to
+          get started.
+        </p>
+        <p class="footnote">
+          Brightness is adjusted in software. Switching off sends black; the
+          controller stays powered.
+        </p>
+      </section>
+      <section id="view-devices" class="view" hidden>
+        <div class="page-heading">
+          <div>
+            <h1>Choose your lights</h1>
+            <p>Only selected lights are exposed to Apple Home.</p>
+          </div>
+          <button id="discover-devices">Connect & discover</button>
+        </div>
+        <article class="card">
+          <div class="section-title">
+            <div>
+              <h2>Available devices</h2>
+              <p id="discovery-status">
+                Connect to OpenRGB to find real hardware.
+              </p>
+            </div>
+            <span id="device-count" class="badge">0 found</span>
+          </div>
+          <div id="device-list"></div>
+          <div id="device-empty" class="empty-state">
+            <span aria-hidden="true">▦</span>
+            <h3>Let’s find your RGB</h3>
+            <p>
+              OpenRGB must detect your devices first. Start its SDK Server, then
+              connect.
+            </p>
+            <div class="button-row">
+              <button id="launch-rgb-devices" class="secondary">
+                Open OpenRGB</button
+              ><button data-help="openrgb" class="text-button">
+                Get OpenRGB ↗
+              </button>
+            </div>
+          </div>
+        </article>
+        <details class="card">
+          <summary>Advanced: independent zones & groups</summary>
+          <p>
+            Zones are experimental. Verify that changing one zone leaves the
+            others unchanged. Avoid other apps controlling the same LEDs.
+          </p>
+          <label
+            ><input id="enable-zones" type="checkbox" /> Enable experimental
+            independent zones</label
+          >
+          <p class="footnote">
+            Unavailable or zero-LED zones cannot be selected. A whole device and
+            its zones cannot be selected together.
+          </p>
+          <div id="group-list"></div>
+          <button id="add-desktop-group" class="secondary">Add group</button>
+        </details>
+        <div class="save-bar">
+          <label
+            ><input id="selection-confirm" type="checkbox" /> Apply my light
+            selections and create a private backup</label
+          ><button id="save-lights">Save lights & start bridge</button>
+        </div>
+      </section>
+      <section id="view-home" class="view" hidden>
+        <div class="page-heading">
+          <div>
+            <h1>Meet Apple Home</h1>
+            <p>Your PC lighting, alongside the rest of your home.</p>
+          </div>
+          <span id="home-pair-badge" class="badge">Not running</span>
+        </div>
+        <article class="card pairing-card">
+          <div class="home-symbol" aria-hidden="true">⌂</div>
+          <h2 id="home-heading">Add your selected lights</h2>
+          <p id="home-instructions">
+            Select at least one light and start the bridge before pairing.
+          </p>
+          <ol class="home-steps">
+            <li>
+              Keep your PC awake and your iPhone on the same trusted home
+              network.
+            </li>
+            <li>
+              Open Apple Home, tap <strong>+ → Add Accessory</strong>, then scan
+              the code below.
+            </li>
+            <li>
+              Assign a room to each light. Your bridge is listed separately
+              under Home Settings → Home Hubs & Bridges.
+            </li>
+          </ol>
+          <button id="reveal-code" disabled>Reveal private pairing code</button
+          ><button id="hide-code" class="secondary" hidden>
+            Hide pairing code
+          </button>
+          <div id="private-pairing" hidden>
+            <p class="private-label">PRIVATE · DO NOT SHARE THIS SCREEN</p>
+            <img
+              id="desktop-qr"
+              alt="Private HomeKit pairing QR code"
+              width="256"
+              height="256"
+            />
+            <p id="desktop-pin" class="pairing-pin"></p>
+          </div>
+          <p class="footnote">
+            This is an experimental, uncertified HomeKit accessory. Existing
+            paired installations do not need to be added again.
+          </p>
+        </article>
+        <article class="card">
+          <h2>Paired, but can’t find a light?</h2>
+          <p>
+            Check that the overview shows at least one selected light and a
+            running bridge. In Apple Home, look in the room you chose or Default
+            Room. The bridge itself does not act as a light tile.
+          </p>
+          <button data-help="pairing" class="text-button">
+            Pairing & troubleshooting guide ↗
+          </button>
+        </article>
+      </section>
+      <section id="view-settings" class="view" hidden>
+        <div class="page-heading">
+          <div>
+            <h1>Make it yours</h1>
+            <p>Set it up once. Let it run quietly in the background.</p>
+          </div>
+        </div>
+        <article class="card">
+          <h2>Start with Windows</h2>
+          <div class="setting-row">
+            <div>
+              <strong>Launch at sign-in</strong>
+              <p>
+                The bridge runs in the system tray. Closing the window keeps
+                your lights connected.
+              </p>
+            </div>
+            <label class="switch"
+              ><input
+                id="desktop-autostart"
+                type="checkbox"
+                aria-label="Launch at Windows sign-in" /><span></span
+            ></label>
+          </div>
+          <p id="startup-note" class="footnote">
+            Available in the installed Windows app.
+          </p>
+          <div class="setting-row">
+            <div>
+              <strong>Open OpenRGB when needed</strong>
+              <p>
+                Start your installed OpenRGB in the background if its SDK server
+                is not listening. No elevation is requested.
+              </p>
+            </div>
+            <label class="switch"
+              ><input
+                id="launch-openrgb"
+                type="checkbox"
+                aria-label="Open OpenRGB when needed" /><span></span
+            ></label>
+          </div>
+          <div class="path-row">
+            <p id="openrgb-path">No OpenRGB executable selected.</p>
+            <button id="choose-openrgb" class="secondary">
+              Locate OpenRGB.exe</button
+            ><button id="launch-openrgb-now" class="secondary">Open now</button>
+          </div>
+          <p class="footnote">
+            RAM detection may require PawnIO and running OpenRGB as
+            administrator. Other manufacturer RGB apps can conflict.
+          </p>
+        </article>
+        <article class="card">
+          <h2>Connection</h2>
+          <div class="form-grid">
+            <label
+              >OpenRGB host<select id="desktop-host">
+                <option>127.0.0.1</option>
+                <option>localhost</option>
+                <option>::1</option>
+              </select></label
+            ><label
+              >SDK Server port<input
+                id="desktop-rgb-port"
+                type="number"
+                min="1024"
+                max="65535" /></label
+            ><label
+              >HomeKit bridge name<input
+                id="desktop-bridge-name"
+                maxlength="64" /></label
+            ><label
+              >HomeKit port<input
+                id="desktop-hap-port"
+                type="number"
+                min="1024"
+                max="65535"
+            /></label>
+          </div>
+          <p class="footnote">
+            Keep your existing HomeKit port when upgrading. A confirmed save
+            creates a private backup and restarts a running bridge.
+          </p>
+          <label
+            ><input id="settings-confirm" type="checkbox" /> Apply these
+            settings and back up my profile</label
+          ><button id="save-desktop-settings">Save connection settings</button>
+        </article>
+        <article class="card">
+          <h2>Your profile</h2>
+          <p>
+            Pairing, selected lights and saved colors stay outside the
+            application folder, including during upgrades and uninstall.
+          </p>
+          <p id="desktop-profile" class="path-text"></p>
+          <p id="existing-profiles" class="footnote"></p>
+          <button id="choose-profile" class="secondary">
+            Open an existing profile
+          </button>
+          <p class="footnote">
+            Choose the folder containing your existing config.json. The app
+            restarts with that profile; it never resets pairing to switch
+            folders.
+          </p>
+        </article>
+        <details class="card">
+          <summary>Diagnostics & advanced options</summary>
+          <p id="diagnostic-summary"></p>
+          <button id="refresh-desktop-logs" class="secondary">
+            Refresh diagnostics
+          </button>
+          <pre
+            id="desktop-logs"
+            tabindex="0"
+            aria-label="Recent diagnostic events"
+          ></pre>
+          <button id="demo-mode" class="secondary">
+            Use a virtual demo light
+          </button>
+          <p class="footnote">
+            Demo mode is for testing only and replaces your selected hardware
+            lights after confirmation.
+          </p>
+          <details>
+            <summary>Deliberately reset HomeKit pairing</summary>
+            <p>
+              Remove the bridge from Apple Home first. A reset backs up your
+              profile and removes pairing keys. Quit and reopen afterward.
+            </p>
+            <label
+              >Type RESET HOMEKIT PAIRING<input
+                id="desktop-reset-confirm"
+                autocomplete="off" /></label
+            ><button id="desktop-reset" class="danger">
+              Back up & reset pairing
+            </button>
+          </details>
+        </details>
+        <div class="button-row">
+          <button data-help="issues" class="text-button">
+            Report an issue ↗</button
+          ><button id="quit-desktop" class="secondary">Quit application</button>
+        </div>
+      </section>
+      <footer>
+        Made by Daniil Kozar · Local by design · Experimental preview
+      </footer>
+    </main>
+    <dialog id="backend-dialog">
+      <form method="dialog">
+        <span class="eyebrow">CHANGE LIGHTING SOURCE</span>
+        <h2 id="backend-dialog-title">Use real hardware?</h2>
+        <p id="backend-dialog-detail"></p>
+        <div class="button-row">
+          <button value="cancel" class="secondary">Cancel</button
+          ><button value="confirm">Back up & switch</button>
+        </div>
+      </form>
+    </dialog>
+  </body>
+</html>

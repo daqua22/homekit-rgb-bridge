@@ -1,16 +1,22 @@
 # Security policy
 
-This is an experimental v0.1.0 candidate. No stable-support or response-time SLA is promised. Security fixes target the maintained source branch. Report vulnerabilities through [GitHub private vulnerability reporting](https://github.com/daqua22/homekit-rgb-bridge/security/advisories/new); if unavailable, use the private contact route at [kozar.dev](https://kozar.dev). Do not post credentials or exploit details in public Issues.
+This is an experimental v0.2.0 desktop candidate. No stable-support or response-time SLA is promised. Security fixes target the maintained source branch. Report vulnerabilities through [GitHub private vulnerability reporting](https://github.com/daqua22/homekit-rgb-bridge/security/advisories/new); if unavailable, use the private contact route at [kozar.dev](https://kozar.dev). Do not post credentials or exploit details in public Issues.
 
 ## Administrative interface
 
 The control panel binds only `127.0.0.1`. Every API requires a random 256-bit bearer credential; there are no authenticated cookies or anonymous configuration APIs. Exact Host/Origin validation, cross-site API/subresource rejection, no CORS permission, bounded JSON bodies, rate/time/header limits, an asset allowlist, CSP/frame restrictions, no-store and no-referrer headers address browser-origin/DNS-rebinding risks.
 
-A top-level `GET /` with Fetch Metadata `navigate`/`document` may load the static shell from the private `file://` handoff, even when marked cross-site. Exact Host and supplied Origin checks still apply. This exception serves no profile data, does not authenticate a session and never applies to API routes, scripts, styles or frames. See the [Fetch Metadata definitions](https://www.w3.org/TR/fetch-metadata/).
+A top-level `GET /` or `GET /desktop` with Fetch Metadata `navigate`/`document` may load the static shell from the private `file://` handoff, even when marked cross-site. Exact Host and supplied Origin checks still apply. This exception serves no profile data, does not authenticate a session and never applies to API routes, scripts, styles or frames. See the [Fetch Metadata definitions](https://www.w3.org/TR/fetch-metadata/).
 
 A private `admin-session.json` and `open-control.html` handoff in the profile allow reopening the running panel. The launch token goes in a URL fragment, is immediately removed from the URL, and is kept in tab session storage. It is never put in process arguments, ordinary logs, Git or package artifacts. An authenticated local UI can view the profile path/config and request pairing information; do not share the screen or handoff files. Any process running as the same Windows user can access this unencrypted local data; this is not isolation from a compromised account, malicious local browser extensions or administrators.
 
 QR/PIN reveal requires explicit user action. It is absent from status/log responses and hidden when the page loses visibility. Deliberate pairing reset requires an exact phrase, stops the bridge and backs up before deleting identity/HAP storage; a new process is required afterward. Configuration Save requires explicit consent and the loaded file revision. Browser requests are schema-validated and dynamic values are rendered as text, not HTML. No endpoint reads arbitrary files or accepts an arbitrary shell command/path.
+
+## V2 desktop boundary
+
+The Electron renderer has sandbox/context isolation, no Node integration, an in-memory session partition and denied permissions. It loads only the exact loopback desktop document. Popups, webviews and external navigation are blocked. Fixed preload methods call IPC whose sender is checked against the exact owned window/main frame/origin/path. File selection uses native dialogs; external help URLs are allowlisted, and executable arguments are fixed/validated without a shell. No raw filesystem, child process or generic IPC interface is exposed to the renderer.
+
+HAP runs in an official Node sidecar because Electron’s embedded BoringSSL lacks the required cipher. Its bootstrap credential uses private IPC rather than argv; inherited DEBUG/NODE_OPTIONS/ELECTRON_RUN_AS_NODE are removed. Child disconnection requests graceful shutdown; forced OS termination remains best effort. The desktop tray/login entry owns user-level startup, and uninstall removes only its named login entry. Existing profiles/backups remain outside the installation. The installer is unsigned; no updater or release publisher is enabled. Electron/Chromium notices and official Node license/provenance are retained. The development-only minimatch override is validated through lint/tests/build/installer CI; runtime and full-toolchain auditing are included.
 
 ## Hardware and network boundary
 

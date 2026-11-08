@@ -1,6 +1,6 @@
 {
   "name": "homekit-rgb-bridge",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Control your PC's RGB lighting through Apple Home. A standalone, open-source HomeKit bridge for Windows.",
   "type": "module",
@@ -33,7 +33,12 @@
     "app": "node dist/index.js app --open",
     "package:windows": "node scripts/package-windows.mjs",
     "verify:windows": "node scripts/verify-windows.mjs",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "desktop": "npm run build && electron .",
+    "desktop:pack": "npm run build && node scripts/stage-desktop.mjs && electron-builder --win --x64 --dir --publish never",
+    "desktop:windows": "npm run build && node scripts/stage-desktop.mjs && electron-builder --win nsis --x64 --publish never && node scripts/desktop-checksums.mjs",
+    "test:desktop": "playwright test --config playwright.desktop.config.ts",
+    "verify:desktop:windows": "node scripts/verify-desktop-windows.mjs"
   },
   "dependencies": {
     "@homebridge/hap-nodejs": "2.2.3",
@@ -49,11 +54,86 @@
     "@types/proper-lockfile": "^4.1.4",
     "@types/qrcode": "^1.5.6",
     "@types/qrcode-terminal": "^0.12.2",
+    "electron": "45.2.3",
+    "electron-builder": "26.18.0",
     "eslint": "^10.13.0",
     "prettier": "^3.9.10",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.72.1",
     "vitest": "^5.0.5"
+  },
+  "main": "dist/desktop/main.js",
+  "build": {
+    "appId": "dev.kozar.homekit-rgb-bridge",
+    "productName": "HomeKit RGB Bridge",
+    "executableName": "HomeKit RGB Bridge",
+    "directories": {
+      "output": "artifacts/desktop",
+      "buildResources": "desktop-assets"
+    },
+    "files": [
+      "dist/**/*",
+      "public/**/*",
+      "desktop-assets/*.{cjs,png}",
+      "package.json",
+      "LICENSE",
+      "THIRD_PARTY_NOTICES.md",
+      "!**/*.map"
+    ],
+    "extraFiles": [
+      {
+        "from": "docs",
+        "to": "docs"
+      },
+      {
+        "from": "LICENSE",
+        "to": "LICENSE.bridge.txt"
+      },
+      {
+        "from": "THIRD_PARTY_NOTICES.md",
+        "to": "THIRD_PARTY_NOTICES.md"
+      }
+    ],
+    "asar": true,
+    "npmRebuild": false,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "HomeKit-RGB-Bridge-${version}-Setup-${arch}.${ext}",
+      "signAndEditExecutable": true
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true,
+      "artifactName": "HomeKit-RGB-Bridge-${version}-Setup-${arch}.${ext}",
+      "include": "installer.nsh"
+    },
+    "publish": null,
+    "extraResources": [
+      {
+        "from": "artifacts/desktop-support/bridge",
+        "to": "bridge"
+      },
+      {
+        "from": "artifacts/desktop-support/runtime",
+        "to": "runtime"
+      }
+    ]
+  },
+  "overrides": {
+    "minimatch@>=7.0.0": "11.0.5"
   }
 }

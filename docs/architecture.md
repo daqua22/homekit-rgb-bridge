@@ -2,7 +2,11 @@
 
 ```mermaid
 flowchart TD
-    UI[Local browser control panel] -->|Bearer + same-origin / loopback| Admin[Administrative HTTP server]
+    Desktop[Electron sandboxed desktop renderer] -->|Bearer / loopback| Admin
+    Desktop -->|Validated fixed IPC methods| Shell[Electron main: tray / dialogs / login]
+    Shell -->|Private IPC, no credential argv| Node[Bundled official Node sidecar]
+    Node --> Admin
+    UI[Legacy local browser control panel] -->|Bearer + same-origin / loopback| Admin[Administrative HTTP server]
     Admin --> App[App controller / serialized lifecycle]
     Home[Apple Home / Siri] --> HAP[HAP-NodeJS authenticated bridge]
     App --> HAP
@@ -41,6 +45,16 @@ Each target belongs to at most one enabled light/group. Whole and child zones ca
 
 The reconnect loop doubles delay to a configured cap, disconnects on errors and re-enumerates before restoration. No parallel reconnect loop is created by UI reads. SIGINT/SIGTERM and authenticated Quit drain work, unpublish HAP, disconnect and release locks. Windows API Quit is graceful even though external forced process termination cannot be. An abandoned heartbeat lock enables later crash recovery. Sleep/wake and actual sign-in/reboot behavior remain physical manual tests, not inferred from CI.
 
+## Desktop runtime boundary
+
+Electron 45.2.3 uses BoringSSL, whose cipher list fails HAP-NodeJS’s required `chacha20-poly1305` check. The desktop main process never imports HAP-NodeJS. It forks `src/desktop/bridge.ts` under a separately bundled, SHA-256-pinned official Node runtime, which owns HAP, the SDK, the profile lock and the protected HTTP API. Local development uses the host Node path instead. Credentials travel only over the private child IPC channel and the local UI fragment, never argv or public logs.
+
+The renderer has sandbox/context isolation enabled, no Node integration, an in-memory session partition, restrictive CSP and denied permission requests. External navigation, webviews and popups are blocked. A narrow context bridge offers only fixed settings/dialog/help actions. Main-process IPC validates the exact window, main frame and loopback `/desktop` origin/path. Help URLs are fixed upstream/project HTTPS destinations; the renderer cannot supply a shell command or arbitrary external URL.
+
+A single-instance lock opens the existing window on a second launch. Close hides to tray; Quit drains the Node service before exiting. Child IPC disconnection requests backend shutdown after a main-process crash. Windows session-end cleanup is best effort; forced OS termination can still require stale-lock recovery. Profile changes relaunch the app and Node service because HAP storage is process-global. Windows sign-in uses a per-user login entry, not VBS or a Windows service. OpenRGB can be launched with validated arguments only after explicit path selection/opt-in; no elevation or hardware driver installation is implemented.
+
 ## Distribution
+
+The desktop Windows x64 NSIS installer contains Electron, its Chromium notices, the official Node sidecar runtime/license/provenance, and locked production dependencies. The installer is per-user, retains profiles on uninstall and removes its own login entry. CI installs it in a temporary folder, runs the actual installed EXE through Electron automation against a synthetic SDK, toggles the Windows login registration, and uninstalls. This does not establish real Windows desktop/reboot or hardware behavior.
 
 The portable Windows x64 build retains modular JavaScript/dependencies and bundles a SHA-256-pinned official Node executable and full runtime license. It avoids relying on experimental SEA features, native installer privileges or downloaded code at runtime. CI extracts and runs it with the bundled runtime, exercises mock HAP/state/API lifecycle and executes the hidden VBS launcher. No system Node/npm is required for operation. OpenRGB/PawnIO remain separate prerequisites.

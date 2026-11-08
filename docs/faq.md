@@ -2,9 +2,9 @@
 
 **Do users need npm or Node installed?** Portable Windows x64 users do not: the package includes a pinned official runtime and production dependencies. Source development and the thin Node preview still use npm/Node.
 
-**Is this Homebridge, Electron or a cloud service?** No. HAP-NodeJS runs directly on the PC. The lightweight browser configuration UI is served only on loopback; no accounts, analytics, cloud database or extra hardware are required.
+**Is this Homebridge or a cloud service?** No. V2 uses Electron for the desktop interface and a bundled official Node process for HAP-NodeJS. Everything runs locally; there are no accounts, analytics, cloud database or extra hardware requirements.
 
-**Is it a native EXE, installer, tray app or Windows service?** No. It is a portable application folder with node.exe, JavaScript/dependencies and a hidden VBS launcher. Startup is user-level at sign-in, not before login. Script Host must be permitted.
+**Is there an EXE and a tray icon?** V2 prepares a Windows x64 EXE installer with shortcuts, tray controls and user-level sign-in startup. It is an unsigned experimental candidate until approved. No Windows service is installed; startup is after sign-in. The older portable VBS/browser package remains an advanced option. See [desktop setup](desktop-v2.md).
 
 **What hardware has actually worked?** The maintainer verified physical Corsair Vengeance RGB DDR5 color changes through Apple Home. Hub, mouse and motherboard entries are discovery only. Brightness/off, zones/groups and physical recovery are unverified. See [matrix](hardware-compatibility.md).
 
@@ -22,8 +22,8 @@
 
 **How is the local panel protected?** Loopback-only binding, random bearer capability supplied through a private launch file, strict Host/Origin checks, no cookies/CORS, request limits and CSP. Pairing QR/PIN appears only after explicit action. Any process with access to your private profile can read local credentials, so protect NTFS permissions/backups.
 
-**What if I close the browser?** The bridge continues. Reopen the launcher with the same profile. Use Quit application for a graceful exit; enable sign-in startup only after validating your setup.
+**What if I close the desktop window?** V2 hides in the system tray and continues running. Click the tray or shortcut to reopen; use Quit application to stop it. The old browser panel also keeps running when its browser tab closes.
 
 **Can it control hardware with the PC off?** No. The PC, bridge and OpenRGB must run. Sleep/wake/reboot behavior needs manual validation. Remote Siri/automations depend on Apple's home hub/network setup.
 
-**Is v0.1.0 published?** Not by this work without explicit maintainer approval. Review artifacts and notes are prepared; the GitHub workflow only builds, validates and uploads candidates.
+**Is the desktop release published?** Publication requires explicit maintainer approval. Review artifacts and notes are prepared; the GitHub workflow only builds, validates and uploads candidates.

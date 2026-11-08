@@ -30,3 +30,14 @@ These baseline results do not automatically verify the new candidate's UI, group
 | Uninstall                           | Disable startup, quit, remove app files; private profile remains; no unrelated software removed        | Procedure documented; physical pending                           |
 
 Do not combine partial results into a blanket compatibility claim. For each physical result record pass/fail, exact observation and known problems. A successful TCP write or unchanged synthetic byte range is not proof of physical output.
+
+## V2 desktop checks
+
+- Fresh install on a real Windows 10/11 desktop: run the unsigned EXE under permitted policy, open the shortcut, inspect layout/keyboard access/display scaling and follow the real-hardware wizard.
+- Existing-profile upgrade: select the exact old profile, gracefully take over a running legacy panel if applicable, retain pairing/rooms/automations/port/state and review backups.
+- Finish setup/startup: choose the login preference, close to tray, reopen through the tray/shortcut, quit, sign out/in and reboot. Confirm exactly one desktop app/Node bridge is running and no stale old task starts another writer.
+- OpenRGB: verify the selected installed executable and CLI flags on the actual installed version. Test both an already running SDK and optional launch while stopped. If RAM requires elevation, test the separately configured elevated OpenRGB startup; the bridge does not elevate it.
+- Sleep/wake, SDK loss/restart, PC network changes and forced desktop-process termination: verify recovery and profile locks without resetting pairing.
+- Uninstall from Windows Settings: the app/login item is removed and real profile/config/identity/HAP/state/backups remain. Reinstall and select that profile to verify reuse.
+
+Installer CI and synthetic tests cover programmatic install/EXE/registry/uninstall, not these actual desktop/hardware observations. No new physical checks are marked passed by this change.
