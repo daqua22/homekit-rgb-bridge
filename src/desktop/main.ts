@@ -88,8 +88,8 @@ function quit(): Promise<void> {
 }
 
 function show() {
-  window?.show();
   if (window?.isMinimized()) window.restore();
+  window?.show();
   window?.focus();
 }
 async function serverListening(host: string, port: number) {
@@ -408,7 +408,10 @@ async function boot() {
 }
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
-  app.on('second-instance', show);
+  app.on('second-instance', () => {
+    desktopLogger.log('info', 'desktop_second_instance');
+    show();
+  });
   app.on('activate', show);
   app.on('window-all-closed', () => {
     /* Tray owns background lifecycle. */

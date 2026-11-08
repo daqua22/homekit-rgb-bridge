@@ -303,9 +303,14 @@ test('Windows login preference, setup completion and tray lifecycle', async () =
     ),
   ).toBe(1);
   expect(existsSync(join(profile, 'admin-session.json'))).toBe(true);
-  const second = spawn(app.process().spawnfile, launchArgs, {
+  const executable = await app.evaluate(() => process.execPath);
+  const launchEnv = { ...process.env };
+  delete launchEnv.ELECTRON_RUN_AS_NODE;
+  delete launchEnv.NODE_OPTIONS;
+  const second = spawn(executable, launchArgs, {
     cwd: resolve('.'),
     stdio: 'ignore',
+    env: launchEnv,
   });
   const code = await new Promise<number | null>((resolve, reject) => {
     const timer = setTimeout(() => {
@@ -319,13 +324,21 @@ test('Windows login preference, setup completion and tray lifecycle', async () =
     });
   });
   expect(code).toBe(0);
-  await expect
-    .poll(() =>
-      app.evaluate(({ BrowserWindow }) =>
-        BrowserWindow.getAllWindows()[0]!.isVisible(),
-      ),
-    )
-    .toBe(true);
+  try {
+    await expect
+      .poll(() =>
+        app.evaluate(({ BrowserWindow }) =>
+          BrowserWindow.getAllWindows()[0]!.isVisible(),
+        ),
+      )
+      .toBe(true);
+  } catch (error) {
+    console.error(
+      'Fixed desktop lifecycle events:\n' +
+        readFileSync(join(root, 'desktop-data', 'events.log'), 'utf8'),
+    );
+    throw error;
+  }
   await app.close();
   expect(existsSync(join(profile, 'admin-session.json'))).toBe(false);
   expect(existsSync(join(profile, 'application.lock'))).toBe(false);
