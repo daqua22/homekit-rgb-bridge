@@ -537,6 +537,7 @@ async function refresh() {
 }
 async function refreshDesktop() {
   if (!window.desktop) return;
+  const firstLoad = !desktopInfo;
   desktopInfo = await native('info');
   byId('profile-banner').hidden =
     desktopInfo.setupComplete ||
@@ -547,7 +548,7 @@ async function refreshDesktop() {
   const canAutostart = desktopInfo.platform === 'win32' && desktopInfo.packaged;
   byId('desktop-autostart').disabled = !canAutostart;
   byId('setup-startup').disabled = !canAutostart;
-  byId('setup-startup').checked = canAutostart;
+  if (firstLoad) byId('setup-startup').checked = canAutostart;
   byId('startup-note').textContent = desktopInfo.legacyStartup
     ? 'A legacy startup launcher exists. Enable this setting to replace this profile’s old launcher with the desktop app.'
     : canAutostart
@@ -614,23 +615,25 @@ byId('save-desktop-settings').addEventListener('click', () =>
     );
   }),
 );
-byId('desktop-autostart').addEventListener('change', () =>
-  action(async () => {
+byId('desktop-autostart').addEventListener('change', () => {
+  const enabled = byId('desktop-autostart').checked;
+  return action(async () => {
     try {
-      await api('autostart', { enabled: byId('desktop-autostart').checked });
+      await api('autostart', { enabled });
       await refreshDesktop();
       notify('Windows startup preference saved.');
     } catch (e) {
       await refreshDesktop();
       throw e;
     }
-  }),
-);
-byId('launch-openrgb').addEventListener('change', () =>
-  action(async () => {
+  });
+});
+byId('launch-openrgb').addEventListener('change', () => {
+  const launchOpenRGB = byId('launch-openrgb').checked;
+  return action(async () => {
     try {
       await native('preferences', {
-        launchOpenRGB: byId('launch-openrgb').checked,
+        launchOpenRGB,
         setupComplete: desktopInfo?.setupComplete ?? false,
       });
       await refreshDesktop();
@@ -639,8 +642,8 @@ byId('launch-openrgb').addEventListener('change', () =>
       await refreshDesktop();
       throw e;
     }
-  }),
-);
+  });
+});
 byId('choose-openrgb').addEventListener('click', () =>
   action(async () => {
     await native('chooseOpenRGB');

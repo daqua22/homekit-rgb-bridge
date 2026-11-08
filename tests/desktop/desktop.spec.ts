@@ -282,6 +282,8 @@ test('desktop renderer is sandboxed and cannot navigate to external code', async
   ).toBeVisible();
 });
 test('Windows login preference, setup completion and tray lifecycle', async () => {
+  if (process.platform === 'win32' && process.env.BRIDGE_DESKTOP_EXE)
+    await page.locator('#setup-startup').uncheck();
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
   if (process.platform === 'win32' && process.env.BRIDGE_DESKTOP_EXE) {
     await page.getByLabel('Launch at Windows sign-in', { exact: true }).check();
@@ -316,7 +318,7 @@ test('Windows login preference, setup completion and tray lifecycle', async () =
     ).toBeDisabled();
   await page.getByRole('button', { name: 'Overview', exact: true }).click();
   if (process.platform === 'win32' && process.env.BRIDGE_DESKTOP_EXE)
-    await page.locator('#setup-startup').uncheck();
+    await expect(page.locator('#setup-startup')).not.toBeChecked();
   await page.getByRole('button', { name: 'Finish setup', exact: true }).click();
   await expect(page.locator('#setup-card')).toBeHidden();
   await page.mouse.move(0, 0);
