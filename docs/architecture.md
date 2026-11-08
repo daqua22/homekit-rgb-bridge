@@ -55,6 +55,8 @@ A single-instance lock opens the existing window on a second launch. Close hides
 
 ## Distribution
 
+Electron Builder filters a root node_modules directory during generic resource copying. The sidecar’s production node_modules therefore has its own explicit resource mapping, covered by a regression using the packager’s actual filter. Installed module imports are checked before UI automation.
+
 The desktop Windows x64 NSIS installer contains Electron, its Chromium notices, the official Node sidecar runtime/license/provenance, and locked production dependencies. The installer is per-user, retains profiles on uninstall and removes its own login entry. CI installs it in a temporary folder, runs the actual installed EXE through Electron automation against a synthetic SDK, toggles the Windows login registration, and uninstalls. This does not establish real Windows desktop/reboot or hardware behavior.
 
 The portable Windows x64 build retains modular JavaScript/dependencies and bundles a SHA-256-pinned official Node executable and full runtime license. It avoids relying on experimental SEA features, native installer privileges or downloaded code at runtime. CI extracts and runs it with the bundled runtime, exercises mock HAP/state/API lifecycle and executes the hidden VBS launcher. No system Node/npm is required for operation. OpenRGB/PawnIO remain separate prerequisites.

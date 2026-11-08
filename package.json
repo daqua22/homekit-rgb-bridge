@@ -128,6 +128,13 @@
         "to": "bridge"
       },
       {
+        "from": "artifacts/desktop-support/bridge/node_modules",
+        "to": "bridge/node_modules",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
         "from": "artifacts/desktop-support/runtime",
         "to": "runtime"
       }
