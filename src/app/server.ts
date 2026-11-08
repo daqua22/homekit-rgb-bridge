@@ -15,6 +15,9 @@ const content: Record<string, { name: string; type: string }> = {
   '/': { name: 'index.html', type: 'text/html' },
   '/app.js': { name: 'app.js', type: 'text/javascript' },
   '/style.css': { name: 'style.css', type: 'text/css' },
+  '/desktop': { name: 'desktop.html', type: 'text/html' },
+  '/desktop.js': { name: 'desktop.js', type: 'text/javascript' },
+  '/desktop.css': { name: 'desktop.css', type: 'text/css' },
 };
 export async function startAdmin(
   controller: AppController,
@@ -72,7 +75,7 @@ export async function startAdmin(
     // Only the static shell can enter this way; API and subresource checks stay strict.
     const shellNavigation =
       req.method === 'GET' &&
-      path === '/' &&
+      (path === '/' || path === '/desktop') &&
       req.headers['sec-fetch-mode'] === 'navigate' &&
       req.headers['sec-fetch-dest'] === 'document';
     if (
@@ -151,7 +154,7 @@ export async function startAdmin(
         await controller.reset(p.confirmation);
       } else if (path === '/api/autostart') {
         const p = z.strictObject({ enabled: z.boolean() }).parse(value);
-        controller.autostart(p.enabled);
+        await controller.autostart(p.enabled);
       } else if (path === '/api/light') {
         const p = z
           .strictObject({ id: z.string(), state: lightStateSchema.partial() })
