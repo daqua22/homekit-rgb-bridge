@@ -50,19 +50,24 @@ async function native(method, value) {
   if (!response.ok) throw Error(response.error);
   return response.value;
 }
-async function action(fn) {
-  if (busy) return;
-  busy = true;
-  document.body.setAttribute('aria-busy', 'true');
-  try {
-    await fn();
-  } catch (error) {
-    notify(error.message, true);
-  } finally {
-    busy = false;
-    document.body.removeAttribute('aria-busy');
-  }
+let actionQueue = Promise.resolve();
+function action(fn) {
+  const run = async () => {
+    busy = true;
+    document.body.setAttribute('aria-busy', 'true');
+    try {
+      await fn();
+    } catch (error) {
+      notify(error.message, true);
+    } finally {
+      busy = false;
+      document.body.removeAttribute('aria-busy');
+    }
+  };
+  actionQueue = actionQueue.then(run, run);
+  return actionQueue;
 }
+
 function hidePairing() {
   byId('private-pairing').hidden = true;
   byId('desktop-qr').removeAttribute('src');

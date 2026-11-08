@@ -58,9 +58,11 @@ let quitting = false;
 let stopped = false;
 let launchingRGB = false;
 const loginOptions = { path: process.execPath, args: ['--hidden'] };
-const loginEnabled = () =>
-  process.platform === 'win32' &&
-  app.getLoginItemSettings(loginOptions).openAtLogin;
+const loginEnabled = () => {
+  if (process.platform !== 'win32') return false;
+  const login = app.getLoginItemSettings(loginOptions);
+  return login.openAtLogin && login.executableWillLaunchAtLogin;
+};
 const setLogin = (enabled: boolean) => {
   if (process.platform !== 'win32' || !app.isPackaged)
     throw new Error(
@@ -71,8 +73,9 @@ const setLogin = (enabled: boolean) => {
     setStartup(preferences.profile, false);
   app.setLoginItemSettings({
     ...loginOptions,
-    name: 'HomeKit RGB Bridge',
+    // Use Electron's default AppUserModelID key so reads and writes agree.
     openAtLogin: enabled,
+    enabled,
   });
 };
 let quitTask: Promise<void> | undefined;

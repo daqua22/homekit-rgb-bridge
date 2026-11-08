@@ -136,6 +136,43 @@ test.afterAll(async () => {
       retryDelay: 200,
     });
 });
+test('settings clicks are retained while initial device discovery is pending', async () => {
+  let release!: () => void, seen!: () => void;
+  const held = new Promise<void>((r) => {
+    release = r;
+  });
+  const started = new Promise<void>((r) => {
+    seen = r;
+  });
+  let first = true;
+  await page.route('**/api/devices', async (route) => {
+    if (first) {
+      first = false;
+      seen();
+      await held;
+    }
+    await route.continue();
+  });
+  try {
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await started;
+    await page.getByRole('button', { name: 'Settings', exact: true }).click();
+    await page
+      .getByText('Diagnostics & advanced options', { exact: true })
+      .click();
+    await page
+      .getByRole('button', { name: 'Refresh diagnostics', exact: true })
+      .click();
+    release();
+    await expect(page.locator('#desktop-logs')).toContainText(
+      'control_panel_ready',
+    );
+  } finally {
+    release();
+    await page.unroute('**/api/devices');
+  }
+  await page.getByRole('button', { name: 'Overview', exact: true }).click();
+});
 test('installed-style setup → real SDK protocol → selected light → HomeKit → persisted identity', async () => {
   await expect(page.locator('#demo-banner')).toBeHidden();
   await expect(page.locator('#light-count')).toHaveText('0');
