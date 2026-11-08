@@ -9,11 +9,7 @@
   </head>
   <body>
     <aside class="sidebar">
-      <a class="brand" href="#overview"
-        ><span class="brand-mark" aria-hidden="true">H</span
-        ><span>HomeKit<br /><strong>RGB Bridge</strong></span></a
-      >
-      <p class="nav-caption">YOUR LIGHTING</p>
+      <a class="brand" href="#overview"><span>HomeKit RGB Bridge</span></a>
       <nav aria-label="Main navigation">
         <button
           data-view="overview"
@@ -34,16 +30,14 @@
         </button>
       </nav>
       <div class="sidebar-bottom">
-        <span class="local-dot"></span> Everything stays on your PC
-        <p>No accounts. No cloud. Just light.</p>
+        <p>Runs locally on this PC</p>
         <small id="app-version">v0.2.0 · Experimental</small>
       </div>
     </aside>
     <main>
       <header class="topbar">
         <div>
-          <span class="eyebrow">DESKTOP EDITION</span>
-          <p id="page-caption">Your lighting, at a glance.</p>
+          <p id="page-caption">Bridge status and light controls</p>
         </div>
         <span id="backend-badge" class="badge">Checking connection</span>
       </header>
@@ -71,8 +65,8 @@
       <section id="view-overview" class="view">
         <div class="page-heading">
           <div>
-            <h1>Your PC. In Apple Home.</h1>
-            <p>Bring all your compatible RGB lighting together.</p>
+            <h1>Overview</h1>
+            <p>Check the connection and control your selected lights.</p>
           </div>
           <span id="bridge-status" class="status-pill">Stopped</span>
         </div>
@@ -99,8 +93,7 @@
         <article id="setup-card" class="card setup-card">
           <div class="section-title">
             <div>
-              <span class="eyebrow">LET’S GET CONNECTED</span>
-              <h2>Three steps to your first light</h2>
+              <h2>First-time setup</h2>
             </div>
             <span id="setup-progress" class="badge">0 of 3</span>
           </div>
@@ -150,7 +143,7 @@
         <div class="section-title">
           <div>
             <h2>Your lights</h2>
-            <p>Try a color here, then control it from Apple Home.</p>
+            <p>Color, brightness and on/off controls</p>
           </div>
           <div class="button-row">
             <button id="start-bridge">Start bridge</button
@@ -170,7 +163,7 @@
       <section id="view-devices" class="view" hidden>
         <div class="page-heading">
           <div>
-            <h1>Choose your lights</h1>
+            <h1>RGB devices</h1>
             <p>Only selected lights are exposed to Apple Home.</p>
           </div>
           <button id="discover-devices">Connect & discover</button>
@@ -187,8 +180,7 @@
           </div>
           <div id="device-list"></div>
           <div id="device-empty" class="empty-state">
-            <span aria-hidden="true">▦</span>
-            <h3>Let’s find your RGB</h3>
+            <h3>No devices discovered</h3>
             <p>
               OpenRGB must detect your devices first. Start its SDK Server, then
               connect.
@@ -229,13 +221,12 @@
       <section id="view-home" class="view" hidden>
         <div class="page-heading">
           <div>
-            <h1>Meet Apple Home</h1>
-            <p>Your PC lighting, alongside the rest of your home.</p>
+            <h1>Apple Home</h1>
+            <p>Pair the bridge and assign rooms to your lights.</p>
           </div>
           <span id="home-pair-badge" class="badge">Not running</span>
         </div>
         <article class="card pairing-card">
-          <div class="home-symbol" aria-hidden="true">⌂</div>
           <h2 id="home-heading">Add your selected lights</h2>
           <p id="home-instructions">
             Select at least one light and start the bridge before pairing.
@@ -288,8 +279,8 @@
       <section id="view-settings" class="view" hidden>
         <div class="page-heading">
           <div>
-            <h1>Make it yours</h1>
-            <p>Set it up once. Let it run quietly in the background.</p>
+            <h1>Settings</h1>
+            <p>Startup, OpenRGB connection and your saved profile</p>
           </div>
         </div>
         <article class="card">
@@ -430,9 +421,7 @@
           ><button id="quit-desktop" class="secondary">Quit application</button>
         </div>
       </section>
-      <footer>
-        Made by Daniil Kozar · Local by design · Experimental preview
-      </footer>
+      <footer>Experimental preview · Daniil Kozar</footer>
     </main>
     <dialog id="backend-dialog">
       <form method="dialog">

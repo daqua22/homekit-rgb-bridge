@@ -5,6 +5,7 @@ Release review candidate. Publication requires explicit maintainer approval.
 ## Changes
 
 - A Windows x64 EXE installer with Start menu/desktop shortcuts and a local Electron interface.
+- Compact Windows-style navigation and settings with system fonts, visible checkboxes and system light/dark colors. The interface remains Electron, not WinUI.
 - A separate official Node sidecar with HAP-compatible crypto; Electron’s embedded runtime is not used for HomeKit cryptography.
 - Guided real-hardware discovery, named light selection, color presets, brightness, HomeKit pairing guidance and clear demo-mode labeling.
 - A tray menu and close-to-tray behavior, optional user-level Windows sign-in startup, and remembered settings/profile.

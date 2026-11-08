@@ -84,10 +84,10 @@ function navigate(view) {
     else n.removeAttribute('aria-current');
   }
   const captions = {
-    overview: 'Your lighting, at a glance.',
-    devices: 'Find, name and choose your lights.',
-    home: 'Bring your PC into Apple Home.',
-    settings: 'Set it up once. Keep it connected.',
+    overview: 'Bridge status and light controls',
+    devices: 'Select the devices to expose to Apple Home',
+    home: 'HomeKit pairing',
+    settings: 'Application preferences',
   };
   byId('page-caption').textContent = captions[view];
   window.scrollTo(0, 0);
@@ -476,7 +476,7 @@ async function refresh() {
     'badge ' + (status.config.adapter === 'mock' ? 'demo' : 'real');
   const running = status.running;
   byId('bridge-status').textContent = running
-    ? '● Bridge running'
+    ? 'Bridge running'
     : 'Bridge stopped';
   byId('bridge-status').className = 'status-pill' + (running ? ' running' : '');
   const connected = status.connection === 'connected';

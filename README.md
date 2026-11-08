@@ -14,7 +14,7 @@ _Actual Electron capture against synthetic SDK controllers. This is interface ve
 
 - A Windows x64 installer and Start menu shortcut. No npm, system Node, browser URL or VBS launcher needed for everyday use.
 - A simple path: connect OpenRGB → choose and name lights → add them to Apple Home.
-- Overview, devices, Apple Home and settings, with color presets and software brightness/on-off controls.
+- Compact Windows-style navigation and settings, system light/dark themes, color presets and software brightness/on-off controls.
 - Close-to-tray operation, Start/Stop/Quit controls and optional quiet startup after Windows sign-in.
 - Remembered profile, connection and startup preferences; optional launch of an installed OpenRGB.
 - Persistent HomeKit pairing, stable existing whole-device identities, private backups and explicit upgrade/profile handling.

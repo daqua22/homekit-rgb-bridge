@@ -5,6 +5,7 @@ import {
   ipcMain,
   Menu,
   nativeImage,
+  nativeTheme,
   Tray,
   shell,
   powerMonitor,
@@ -251,12 +252,12 @@ async function boot() {
   const origin = runtime.origin;
   const partition = 'bridge-' + Date.now(); // In-memory: credentials and session storage never persist in Chromium profiles.
   window = new BrowserWindow({
-    width: 1200,
-    height: 840,
+    width: 1040,
+    height: 760,
     minWidth: 780,
     minHeight: 580,
     title: 'HomeKit RGB Bridge',
-    backgroundColor: '#f5f7fb',
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#202020' : '#f3f3f3',
     show: false,
     autoHideMenuBar: true,
     icon: fileURLToPath(

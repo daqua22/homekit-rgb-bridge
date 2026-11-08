@@ -4,6 +4,16 @@ V2 is a Windows x64 desktop app, with an EXE installer, Start menu/desktop short
 
 The Windows installer is a review artifact until the maintainer approves publication. Use only the exact successful `desktop-windows` CI artifact, `windows-desktop-v2-review`. GitHub sign-in can be required and these review artifacts expire after 30 days. There is no automatic update or release publication.
 
+## Interface
+
+The interface uses a compact Windows-style layout: system fonts, flat navigation, standard visible checkboxes, concise status rows and light/dark colors that follow the system theme. Overview contains the connection status and light controls; RGB devices selects what Apple Home exposes; Apple Home contains pairing; Settings contains startup, connection and profile options. Advanced and destructive actions remain collapsed.
+
+This is still an Electron interface with a native operating-system window frame and file dialogs. It does not use WinUI or native Windows controls for its content. The design change preserves the existing Node sidecar, settings and pairing storage.
+
+![Actual desktop interface in dark mode, using synthetic OpenRGB controllers](images/desktop-overview-dark.png)
+
+The screenshot is captured from the running Electron app against a synthetic SDK server; it does not verify physical hardware.
+
 ## Install and connect
 
 1. Download the review artifact from a successful [CI run](https://github.com/daqua22/homekit-rgb-bridge/actions/workflows/ci.yml), extract its download ZIP and compare the installer’s SHA-256 with `SHA256SUMS-desktop.txt`.

@@ -91,7 +91,7 @@ test.beforeAll(async () => {
     throw error;
   }
   await expect(
-    page.getByRole('heading', { name: 'Your PC. In Apple Home.' }),
+    page.getByRole('heading', { name: 'Overview', exact: true }),
   ).toBeVisible();
   expect(readFileSync(join(profile, 'config.json'), 'utf8')).toBe(
     originalConfig,
@@ -278,7 +278,7 @@ test('desktop renderer is sandboxed and cannot navigate to external code', async
     waitUntil: 'domcontentloaded',
   });
   await expect(
-    page.getByRole('heading', { name: 'Your PC. In Apple Home.' }),
+    page.getByRole('heading', { name: 'Overview', exact: true }),
   ).toBeVisible();
 });
 test('Windows login preference, setup completion and tray lifecycle', async () => {
@@ -322,7 +322,35 @@ test('Windows login preference, setup completion and tray lifecycle', async () =
   await page.getByRole('button', { name: 'Finish setup', exact: true }).click();
   await expect(page.locator('#setup-card')).toBeHidden();
   await page.mouse.move(0, 0);
+  await page.emulateMedia({ colorScheme: 'light' });
   await page.screenshot({ path: 'artifacts/desktop-overview.png' });
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.screenshot({ path: 'artifacts/desktop-settings.png' });
+  // Check the minimum supported window size through each usable view.
+  await app.evaluate(({ BrowserWindow }) =>
+    BrowserWindow.getAllWindows()[0]!.setContentSize(780, 580),
+  );
+  for (const view of ['Overview', 'RGB devices', 'Apple Home', 'Settings']) {
+    await page
+      .getByRole('button', { name: view, exact: view !== 'RGB devices' })
+      .click();
+    await expect(
+      page.getByRole('heading', { name: view, exact: true }),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  }
+  await page.screenshot({ path: 'artifacts/desktop-settings-compact.png' });
+  await app.evaluate(({ BrowserWindow }) =>
+    BrowserWindow.getAllWindows()[0]!.setContentSize(1040, 760),
+  );
+  await page.getByRole('button', { name: 'Overview', exact: true }).click();
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.screenshot({ path: 'artifacts/desktop-overview-dark.png' });
+  await page.emulateMedia({ colorScheme: 'light' });
   const preferences = JSON.parse(
     readFileSync(join(root, 'desktop-data', 'desktop-settings.json'), 'utf8'),
   );
