@@ -74,7 +74,22 @@ test.beforeAll(async () => {
     cwd: resolve('.'),
     timeout: 40000,
   });
-  page = await app.firstWindow();
+  try {
+    page = await app.firstWindow();
+  } catch (error) {
+    const log = join(root, 'desktop-data', 'events.log');
+    if (existsSync(log))
+      console.error(
+        'Fixed desktop startup events:\n' + readFileSync(log, 'utf8'),
+      );
+    console.error(
+      'Native window count:',
+      await app.evaluate(
+        ({ BrowserWindow }) => BrowserWindow.getAllWindows().length,
+      ),
+    );
+    throw error;
+  }
   await expect(
     page.getByRole('heading', { name: 'Your PC. In Apple Home.' }),
   ).toBeVisible();
@@ -85,7 +100,11 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   if (app) {
     try {
-      if (process.platform === 'win32' && process.env.BRIDGE_DESKTOP_EXE) {
+      if (
+        page &&
+        process.platform === 'win32' &&
+        process.env.BRIDGE_DESKTOP_EXE
+      ) {
         await page.evaluate(async () => {
           const value = sessionStorage.getItem('bridge-token');
           await fetch('/api/autostart', {
@@ -98,13 +117,24 @@ test.afterAll(async () => {
           });
         });
       }
-      await app.close();
     } catch {
       /* Already quit. */
+    } finally {
+      try {
+        await app.close();
+      } catch {
+        /* Already quit. */
+      }
     }
   }
   await sdk?.close();
-  if (root) rmSync(root, { recursive: true, force: true });
+  if (root)
+    rmSync(root, {
+      recursive: true,
+      force: true,
+      maxRetries: 20,
+      retryDelay: 200,
+    });
 });
 test('installed-style setup → real SDK protocol → selected light → HomeKit → persisted identity', async () => {
   await expect(page.locator('#demo-banner')).toBeHidden();

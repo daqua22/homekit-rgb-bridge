@@ -7,6 +7,7 @@ export async function startDesktopService(options: {
   profile: string;
   autostart: boolean;
   setAutostart(enabled: boolean): void;
+  diagnostic?(event: string): void;
 }) {
   const env = { ...process.env };
   delete env.NODE_OPTIONS;
@@ -14,13 +15,25 @@ export async function startDesktopService(options: {
   delete env.ELECTRON_RUN_AS_NODE;
   const child = fork(options.entry, ['--data-dir', options.profile], {
     execPath: options.node,
+    // Electron/automation flags are not valid arguments for the official Node sidecar.
+    execArgv: [],
     env,
     silent: true,
     windowsHide: true,
   });
   // Child diagnostics stay in its bounded private event log, never argv or desktop console.
   child.stdout?.resume();
-  child.stderr?.resume();
+  child.stderr?.on('data', (bytes: Buffer) => {
+    const text = bytes.toString('utf8');
+    if (/bad option:|not allowed in NODE_OPTIONS/.test(text))
+      options.diagnostic?.('desktop_node_invalid_option');
+    else if (/MODULE_NOT_FOUND|Cannot find (module|package)/.test(text))
+      options.diagnostic?.('desktop_node_missing_module');
+    else if (/chacha20-poly1305/.test(text))
+      options.diagnostic?.('desktop_node_crypto_unavailable');
+    else if (/ERR_|Error:/.test(text))
+      options.diagnostic?.('desktop_node_startup_error');
+  });
   let exitCode: number | null = null;
   child.once('exit', (code) => {
     exitCode = code ?? 1;
@@ -83,9 +96,10 @@ export async function startDesktopService(options: {
           reject(new Error('PROFILE_ALREADY_RUNNING'));
         }
       });
-      child.once('spawn', () =>
-        child.send({ type: 'initialize', enabled: options.autostart }),
-      );
+      child.once('spawn', () => {
+        options.diagnostic?.('desktop_node_spawned');
+        child.send({ type: 'initialize', enabled: options.autostart });
+      });
     },
   );
   async function api(path: string, value?: unknown) {

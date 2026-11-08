@@ -22,6 +22,7 @@ import {
   readJSON,
 } from '../config/config-manager.js';
 import { startDesktopService } from './service.js';
+import { Logger } from '../utils/logger.js';
 import { setStartup, startupEnabled } from '../windows/startup.js';
 import {
   loadDesktopSettings,
@@ -43,6 +44,7 @@ const desktopDir = resolve(
 );
 mkdirSync(desktopDir, { recursive: true, mode: 0o700 });
 app.setPath('userData', desktopDir);
+const desktopLogger = new Logger('info', desktopDir);
 const preferences = loadDesktopSettings(
   desktopDir,
   argument('--data-dir') ?? dataDirectory(),
@@ -177,6 +179,7 @@ function handle(name: string, fn: (value: unknown) => unknown) {
   });
 }
 async function boot() {
+  desktopLogger.log('info', 'desktop_starting_bridge');
   const launch = () =>
     startDesktopService({
       entry: app.isPackaged
@@ -190,6 +193,7 @@ async function boot() {
       profile: preferences.profile,
       autostart: loginEnabled(),
       setAutostart: setLogin,
+      diagnostic: (event) => desktopLogger.log('info', event),
     });
   try {
     runtime = await launch();
@@ -240,6 +244,7 @@ async function boot() {
     runtime = await launch();
   }
   if (!runtime) throw new Error('Desktop backend unavailable');
+  desktopLogger.log('info', 'desktop_bridge_ready');
   const origin = runtime.origin;
   const partition = 'bridge-' + Date.now(); // In-memory: credentials and session storage never persist in Chromium profiles.
   window = new BrowserWindow({
@@ -269,6 +274,7 @@ async function boot() {
   window.webContents.session.setPermissionRequestHandler(
     (_webContents, _permission, callback) => callback(false),
   );
+  desktopLogger.log('info', 'desktop_window_created');
   window.webContents.session.setPermissionCheckHandler(() => false);
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('will-navigate', (event, url) => {
@@ -397,6 +403,7 @@ async function boot() {
     if (!quitting) void quit();
   });
   await window.loadURL(origin + '/desktop#token=' + runtime.token);
+  desktopLogger.log('info', 'desktop_window_loaded');
   if (!process.argv.includes('--hidden') || !preferences.setupComplete) show();
 }
 if (!app.requestSingleInstanceLock()) app.quit();
@@ -419,6 +426,7 @@ else {
     .whenReady()
     .then(boot)
     .catch(async () => {
+      desktopLogger.log('error', 'desktop_startup_failed');
       await dialog.showMessageBox({
         type: 'error',
         title: 'Bridge could not start',
