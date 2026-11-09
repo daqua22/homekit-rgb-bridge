@@ -1,7 +1,11 @@
 import { execFile } from 'node:child_process';
 import { win32 } from 'node:path';
 export function windowsTool(
-  name: 'sc.exe' | 'tasklist.exe' | 'WindowsPowerShell\\v1.0\\powershell.exe',
+  name:
+    | 'sc.exe'
+    | 'tasklist.exe'
+    | 'icacls.exe'
+    | 'WindowsPowerShell\\v1.0\\powershell.exe',
   env: NodeJS.ProcessEnv = process.env,
 ) {
   const root = env.SystemRoot || env.WINDIR || 'C:\\Windows';
@@ -30,7 +34,10 @@ export function runWindowsCommand(
           stdout: error ? '' : stdout,
         }),
     );
-    if (input !== undefined) child.stdin?.end(input);
+    if (input !== undefined) {
+      child.stdin?.on('error', () => {}); // A blocked/canceled helper can close its pipe early.
+      child.stdin?.end(input);
+    }
   });
 }
 
