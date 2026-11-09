@@ -114,6 +114,15 @@ try {
   );
   if (remove.status !== 0) throw new Error('Uninstaller smoke failed');
   installed = false;
+  // NSIS can hand off to a temporary uninstaller before its launcher exits.
+  const uninstallDeadline = Date.now() + 60000;
+  while (
+    existsSync(join(destination, 'HomeKit RGB Bridge.exe')) &&
+    Date.now() < uninstallDeadline
+  )
+    await delay(500);
+  if (existsSync(join(destination, 'HomeKit RGB Bridge.exe')))
+    throw new Error('Uninstaller did not remove the installed application.');
   if (
     readFileSync(sentinel, 'utf8') !==
     '{"synthetic":"retained outside installation"}'
@@ -132,15 +141,16 @@ try {
       timeout: 180000,
     });
   // NSIS may finish deleting its temporary uninstaller after its parent exits.
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 60; i++) {
     try {
       rmSync(root, { recursive: true, force: true });
       break;
     } catch (error) {
-      if (i === 19) {
+      if (i === 59) {
         console.error(
           'Temporary installer files could not be removed:',
           error.code,
+          String(error.path || '').replaceAll(root, '<installer-check>'),
         );
         process.exitCode = 1;
       }
