@@ -12,17 +12,20 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { request } from 'node:http';
 import { initialize } from '../src/config/config-manager.js';
-import { AppController } from '../src/app/controller.js';
+import {
+  AppController,
+  type StartupIntegration,
+} from '../src/app/controller.js';
 import { startAdmin } from '../src/app/server.js';
 const cleanup: (() => Promise<void> | void)[] = [];
 afterEach(async () => {
   for (const f of cleanup.splice(0).reverse()) await f();
 });
-async function setup() {
+async function setup(startup?: StartupIntegration) {
   const dir = mkdtempSync(join(tmpdir(), 'rgb-admin-'));
   cleanup.push(() => rmSync(dir, { recursive: true, force: true }));
   initialize(dir, true);
-  const controller = new AppController(dir);
+  const controller = new AppController(dir, undefined, startup);
   const admin = await startAdmin(controller, { port: 0 });
   cleanup.push(admin.close);
   return { controller, admin, dir };
@@ -57,6 +60,52 @@ it('serves only explicit assets with restrictive security headers', async () => 
   );
   expect(response.headers.get('Cache-Control')).toBe('no-store');
   expect((await fetch(admin.origin + '/../package.json')).status).toBe(401);
+});
+it('does not publish an empty bridge or create pairing credentials before light selection', async () => {
+  const { controller, dir } = await setup();
+  await controller.save(
+    { ...controller.config, devices: [], groups: [] },
+    controller.revision(),
+    true,
+  );
+  await expect(controller.start()).rejects.toThrow('Select at least one light');
+  expect(existsSync(join(dir, 'identity.json'))).toBe(false);
+});
+it('clears old virtual discovery when switching to real hardware', async () => {
+  const { controller } = await setup();
+  expect((await controller.discover())[0]?.name).toBe('Virtual RGB Light');
+  await controller.save(
+    { ...controller.config, adapter: 'openrgb', devices: [], groups: [] },
+    controller.revision(),
+    true,
+  );
+  expect(controller.status().detectedDevices).toBe(0);
+});
+it('waits for native startup acknowledgment and reports failures without claiming success', async () => {
+  let enabled = false,
+    fail = true;
+  const { admin, controller } = await setup({
+    enabled: () => enabled,
+    set: async (value) => {
+      await Promise.resolve();
+      if (fail) throw new Error('Synthetic startup failure');
+      enabled = value;
+    },
+  });
+  const update = () =>
+    fetch(admin.origin + '/api/autostart', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + admin.token,
+        'Content-Type': 'application/json',
+      },
+      body: '{"enabled":true}',
+    });
+  expect((await update()).status).toBe(503);
+  expect(controller.status().autostart).toBe(false);
+  fail = false;
+  expect((await update()).status).toBe(200);
+  expect(controller.status().autostart).toBe(true);
 });
 it('allows the launcher document navigation while retaining origin, host and API protection', async () => {
   const { admin } = await setup();

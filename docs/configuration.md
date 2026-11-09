@@ -1,5 +1,7 @@
 # Configuration and migrations
 
+V2 desktop users configure selections in **RGB devices** and connections/startup in **Settings**; see [desktop setup](desktop-v2.md). The same versioned bridge config, identity and state described below are retained. Desktop-only profile/OpenRGB preferences are stored separately in the app’s private `desktop-settings.json`.
+
 Use the local control panel for normal configuration. JSON editing is an advanced/source workflow. Profiles live outside the application: `%LOCALAPPDATA%\HomeKitRGBBridge` by default on Windows and `~/.homekit-rgb-bridge` on POSIX. The launcher can select a different existing profile; every CLI command accepts `--data-dir <path>`.
 
 ## Version 1

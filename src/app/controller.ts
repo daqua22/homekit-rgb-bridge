@@ -22,6 +22,10 @@ import type { RGBDevice } from '../devices/device-types.js';
 import { Logger } from '../utils/logger.js';
 import { startupEnabled, setStartup } from '../windows/startup.js';
 export class UserError extends Error {}
+export interface StartupIntegration {
+  enabled(): boolean;
+  set(enabled: boolean): void | Promise<void>;
+}
 export class AppController {
   config: Config;
   manager?: DeviceManager;
@@ -34,6 +38,7 @@ export class AppController {
   constructor(
     readonly dir: string,
     private adapterFactory?: (config: Config) => RGBAdapter,
+    private startupIntegration?: StartupIntegration,
   ) {
     this.config = loadConfig(dir);
     this.logger = new Logger(this.config.logging, dir);
@@ -68,7 +73,7 @@ export class AppController {
       paired: this.homekit?.paired() ?? null,
       detectedDevices: this.manager?.inventory().length ?? this.detected.length,
       accessories: configuredLights(this.config).length,
-      autostart: startupEnabled(this.dir),
+      autostart: this.startupIntegration?.enabled() ?? startupEnabled(this.dir),
       platform: process.platform,
       config: this.config,
       revision: this.revision(),
@@ -87,6 +92,10 @@ export class AppController {
   }
   private async startInternal(): Promise<void> {
     if (this.homekit) return;
+    if (!configuredLights(this.config).length)
+      throw new UserError(
+        'Select at least one light, save, then start the bridge.',
+      );
     if (this.restartRequired)
       throw new UserError(
         'Quit and reopen the application after resetting pairing.',
@@ -181,10 +190,16 @@ export class AppController {
           'The control-panel port is fixed for this session; change it in a stopped source installation.',
         );
       const running = !!this.homekit;
+      const changedSource =
+        config.adapter !== this.config.adapter ||
+        config.openrgb.host !== this.config.openrgb.host ||
+        config.openrgb.port !== this.config.openrgb.port;
       await this.stopInternal();
       this.config = saveConfig(this.dir, config);
+      if (changedSource) this.detected = [];
       this.logger = new Logger(this.config.logging, this.dir);
-      if (running) await this.startInternal();
+      if (running && configuredLights(config).length)
+        await this.startInternal();
     });
   }
   async pairing() {
@@ -213,7 +228,8 @@ export class AppController {
       this.logger.log('info', 'pairing_reset_requires_restart');
     });
   }
-  autostart(enable: boolean): void {
-    setStartup(this.dir, enable);
+  async autostart(enable: boolean): Promise<void> {
+    if (this.startupIntegration) await this.startupIntegration.set(enable);
+    else setStartup(this.dir, enable);
   }
 }

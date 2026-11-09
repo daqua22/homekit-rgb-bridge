@@ -21,9 +21,14 @@ export default ts.config(
           'setTimeout',
           'clearTimeout',
           'console',
+          'innerWidth',
         ].map((x) => [x, 'readonly']),
       ),
     },
+  },
+  {
+    files: ['desktop-assets/*.cjs'],
+    languageOptions: { globals: { require: 'readonly', process: 'readonly' } },
   },
   ...ts.configs.recommended,
   {
@@ -38,5 +43,9 @@ export default ts.config(
         AbortSignal: 'readonly',
       },
     },
+  },
+  {
+    files: ['desktop-assets/*.cjs'],
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
   },
 );

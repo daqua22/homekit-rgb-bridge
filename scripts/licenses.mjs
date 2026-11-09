@@ -13,6 +13,12 @@ const allowed = new Set([
   '0BSD',
   'Unlicense',
   'MPL-2.0',
+  // Reviewed development-only builder licenses; no build-tool JS enters runtime bundles.
+  'Python-2.0',
+  'WTFPL',
+  'WTFPL OR ISC',
+  '(WTFPL OR MIT)',
+  '(MIT OR CC0-1.0)',
 ]);
 const rows = [];
 let notices =
@@ -46,7 +52,7 @@ for (const [path, entry] of Object.entries(lock.packages)) {
 writeFileSync('THIRD_PARTY_NOTICES.md', notices);
 writeFileSync(
   'docs/dependency-licenses.md',
-  '# Dependency license review\n\nRuntime dependency inventory generated from the exact lockfile. These permissive licenses permit use with the MIT original code, with upstream notices retained. No OpenRGB binaries, drivers or manufacturer SDKs are redistributed. Windows portable builds bundle an unmodified official Node.js executable and retain its full MIT and third-party license text in runtime/LICENSE.txt; the version, download URL and SHA-256 are pinned in distribution-runtime.json. The independent TCP adapter communicates with separately installed OpenRGB; it contains no copied OpenRGB implementation. Development-only Lightning CSS packages use MPL-2.0 and are neither modified nor included in the preview archive. Re-run this review when dependencies change. This inventory is an engineering review, not a legal opinion.\n\n| Package | Version | License |\n| --- | --- | --- |\n' +
+  '# Dependency license review\n\nRuntime dependency inventory generated from the exact lockfile. These permissive licenses permit use with the MIT original code, with upstream notices retained. No OpenRGB binaries, drivers or manufacturer SDKs are redistributed. Windows portable builds bundle an unmodified official Node.js executable and retain its full MIT and third-party license text in runtime/LICENSE.txt; the version, download URL and SHA-256 are pinned in distribution-runtime.json. The independent TCP adapter communicates with separately installed OpenRGB; it contains no copied OpenRGB implementation. Development-only Lightning CSS packages use MPL-2.0 and are neither modified nor included in the preview archive. Desktop builds also retain Electron’s MIT license and Chromium third-party notices beside the executable, plus the bundled official Node runtime license/provenance. Development-only builder dependencies additionally use Python-2.0, WTFPL and permissive OR expressions; their installed license texts were reviewed and those build tools are not bundled. Re-run this review when dependencies change. This inventory is an engineering review, not a legal opinion.\n\n| Package | Version | License |\n| --- | --- | --- |\n' +
     rows.join('\n') +
     '\n\nFull runtime notices: [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md).\n',
 );

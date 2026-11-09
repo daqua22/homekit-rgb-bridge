@@ -10,7 +10,7 @@ import {
   writeJSON,
 } from '../config/config-manager.js';
 import { configuredLights } from '../devices/device-manager.js';
-import { AppController } from './controller.js';
+import { AppController, type StartupIntegration } from './controller.js';
 import { startAdmin } from './server.js';
 export function openPanel(dir: string): void {
   const file = join(dir, 'open-control.html');
@@ -31,7 +31,12 @@ export async function runApp(
   dir: string,
   open = false,
   port?: number,
-): Promise<void> {
+  options: {
+    desktop?: boolean;
+    onQuit?: () => void;
+    startup?: StartupIntegration;
+  } = {},
+) {
   ensurePrivateDirectory(dir);
   // A second launcher may safely reopen the existing authenticated panel; credentials never enter argv.
   if (existsSync(join(dir, 'admin-session.json'))) {
@@ -49,11 +54,14 @@ export async function runApp(
           signal: AbortSignal.timeout(1000),
         });
         if (response.ok) {
+          if (options.desktop) throw new Error('PROFILE_ALREADY_RUNNING');
           if (open) openPanel(dir);
           return;
         }
       }
-    } catch {
+    } catch (error) {
+      if (error instanceof Error && error.message === 'PROFILE_ALREADY_RUNNING')
+        throw error;
       /* A crashed instance can leave a stale local session file. */
     }
   }
@@ -69,7 +77,7 @@ export async function runApp(
   }
   if (!release) throw new Error('Data folder is locked');
   if (!existsSync(join(dir, 'config.json'))) initialize(dir, false);
-  const controller = new AppController(dir);
+  const controller = new AppController(dir, undefined, options.startup);
   let admin: Awaited<ReturnType<typeof startAdmin>> | undefined;
   let stopping = false;
   const stop = async () => {
@@ -89,14 +97,26 @@ export async function runApp(
   };
   try {
     try {
-      admin = await startAdmin(controller, { port, onQuit: stop });
+      admin = await startAdmin(controller, {
+        port,
+        onQuit: async () => {
+          await stop();
+          options.onQuit?.();
+        },
+      });
     } catch (error) {
       if (
         (error as NodeJS.ErrnoException).code !== 'EADDRINUSE' ||
         port !== undefined
       )
         throw error;
-      admin = await startAdmin(controller, { port: 0, onQuit: stop });
+      admin = await startAdmin(controller, {
+        port: 0,
+        onQuit: async () => {
+          await stop();
+          options.onQuit?.();
+        },
+      });
     }
     writeJSON(join(dir, 'admin-session.json'), {
       origin: admin.origin,
@@ -127,6 +147,7 @@ export async function runApp(
       }
     controller.logger.log('info', 'control_panel_ready');
     if (open) openPanel(dir);
+    return { controller, admin, stop };
   } catch (error) {
     await stop();
     throw error;

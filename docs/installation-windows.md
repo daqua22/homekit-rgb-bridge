@@ -1,6 +1,10 @@
 # Windows installation, upgrade and uninstall
 
-## Portable x64 candidate
+## V2 desktop EXE installer
+
+The current desktop candidate uses an EXE installer, Start menu shortcut, settings and a system tray. Follow [V2 desktop installation, upgrade and uninstall](desktop-v2.md). Existing pairing stays in the selected private profile.
+
+## Legacy portable x64 candidate
 
 The Windows x64 ZIP bundles an unmodified official Node 24 executable, production dependencies, compiled bridge, local web UI, notices and background launcher. It is not a single-file executable, installer, native tray app or Windows service. No arm64 build is offered. Build provenance is pinned in `distribution-runtime.json`; the archive retains `runtime/LICENSE.txt` and `runtime/provenance.json`.
 

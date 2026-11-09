@@ -1,6 +1,6 @@
 # Candidate security review
 
-Scope: local control-panel routes, launch handoff, configuration/state/pairing lifecycle, OpenRGB parser/writes, filesystem scope, Windows Startup generation and portable distribution. This is an engineering review with automated regression checks, not independent penetration testing or Windows desktop certification.
+Scope: local control-panel routes, launch handoff, configuration/state/pairing lifecycle, OpenRGB parser/writes, filesystem scope, Windows Startup generation, Electron IPC/navigation/sandbox boundaries, official Node sidecar startup/shutdown, and installer/portable distribution. This is an engineering review with automated regression checks, not independent penetration testing or Windows desktop certification.
 
 Reviewed controls include bearer authentication for every API, strict loopback Host/Origin checks, cross-site/preflight refusal, CSP/no-store and an asset allowlist; bounded requests/frames/timeouts; explicit consent/revision checks for config writes and exact reset confirmation; private backups and fail-closed missing identities; preserved whole-device IDs/ports; serialized range/group commands with honest partial outcomes; lock ownership/recovery; and user-level, quoted Startup launchers without secrets or elevation. No arbitrary file-read/shell-execution API, cloud secret, automatic firewall change, driver install, firmware/profile save, fan/pump control or release publication path is introduced.
 
