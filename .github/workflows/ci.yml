@@ -70,8 +70,8 @@ jobs:
       - run: npm run licenses
       - run: git diff --exit-code -- THIRD_PARTY_NOTICES.md docs/dependency-licenses.md
       - run: npm audit
-      - run: npm run test:desktop
-      - run: npm run desktop:windows
+      - run: npm run ci:desktop -- test:desktop
+      - run: npm run ci:desktop -- desktop:windows
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       - run: npm run verify:desktop:windows

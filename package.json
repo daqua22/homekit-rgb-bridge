@@ -38,7 +38,8 @@
     "desktop:pack": "npm run build && node scripts/stage-desktop.mjs && electron-builder --win --x64 --dir --publish never",
     "desktop:windows": "npm run build && node scripts/stage-desktop.mjs && electron-builder --win nsis --x64 --publish never && node scripts/desktop-checksums.mjs",
     "test:desktop": "playwright test --config playwright.desktop.config.ts",
-    "verify:desktop:windows": "node scripts/verify-desktop-windows.mjs"
+    "verify:desktop:windows": "node scripts/verify-desktop-windows.mjs",
+    "ci:desktop": "node scripts/ci-desktop-retry.mjs"
   },
   "dependencies": {
     "@homebridge/hap-nodejs": "2.2.3",
