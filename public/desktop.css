@@ -800,3 +800,11 @@ dialog p {
     background: CanvasText;
   }
 }
+
+.setup-options {
+  display: grid;
+  gap: 8px;
+}
+#openrgb-startup-status[data-phase='attention'] {
+  color: var(--error-text);
+}

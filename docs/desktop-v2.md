@@ -33,11 +33,26 @@ A folder with HomeKit files is not proof that Apple Home is still paired. The ru
 
 A profile on another drive, under another Windows account or in an arbitrary custom location may require **Browse for another folder**. The app cannot recover local pairing keys from your iPhone or iCloud. If the original files were deleted, automatic detection cannot recreate the previous pairing.
 
-## OpenRGB startup
+## Start everything after Windows sign-in
 
-In Settings, use **Locate OpenRGB.exe** if the known installation paths were not detected. Optionally enable **Open OpenRGB when needed**. When the app starts or the PC wakes, it checks for a local SDK listener and launches the selected executable only if needed, passing the upstream `--server`, `--server-host`, `--server-port`, `--gui`, and `--startminimized` arguments. No arbitrary command-line text or shell is accepted. It does not terminate OpenRGB when the bridge quits, install drivers, request elevation, or change firewall rules.
+For USB lighting that works without administrator access, leave **Start quietly when I sign in to Windows** and **Start OpenRGB automatically with the bridge** checked when finishing setup. Select the installed OpenRGB.exe if prompted. In Settings these options are **Launch at sign-in** and **Open OpenRGB when needed**.
 
-If OpenRGB is already running without its SDK server, enable the server in that instance instead of launching another. OpenRGB’s CLI version and actual hardware discovery remain prerequisites. RAM may require the official PawnIO driver and running OpenRGB with administrator access; the bridge itself runs as the normal user. Close iCUE and other competing RGB apps. If ordinary-user OpenRGB cannot detect RAM, configure its startup/elevation separately; the bridge cannot promise unattended driver elevation.
+For RAM that requires elevated OpenRGB access:
+
+1. Install OpenRGB normally under **Program Files**, and install the official [PawnIO driver](https://pawnio.eu/) once. OpenRGB must already detect the hardware when run as administrator; the bridge cannot add unsupported hardware.
+2. In the installed bridge, use **Settings → Locate OpenRGB.exe** if the executable was not detected.
+3. Choose **Set up automatic Windows startup** and approve the one-time Windows administrator prompt. Use the same administrator account you sign into Windows with. The app verifies registration before marking setup complete.
+4. At subsequent sign-ins, Windows starts OpenRGB with the required privileges and starts the bridge quietly in its tray. No administrator password is stored and no per-boot UAC prompt is requested by this setup. This is **after sign-in**, not before the login screen.
+
+The optional task is named `HomeKitRGBBridge-OpenRGB-<account hash>`, is tied to the current user's interactive sign-in, runs the selected OpenRGB executable with fixed local SDK arguments and ignores concurrent task instances. The bridge remains a normal-user process. Elevated recurring startup requires an administrator-protected installation inside Program Files; editable/redirected executable locations are rejected. Re-run setup after changing the OpenRGB executable or SDK host/port. A standard Windows account cannot obtain unattended administrator execution through this feature.
+
+Use only one OpenRGB startup mechanism: disable older manually configured OpenRGB startup entries/tasks separately. Existing unrelated tasks are not overwritten. If an ordinary-user OpenRGB copy is already running, close it once and sign out/in to apply the new elevated startup mode. The bridge does not terminate existing RGB apps.
+
+The bridge waits up to 30 seconds for the SDK port after launch, coalesces its own concurrent launch requests, and reuses an existing listener. An existing OpenRGB process without a working SDK is not duplicated; enable its SDK Server. Slow hardware detection can require more time and a retry. The existing bridge reconnect loop continues trying to recover saved lights.
+
+Settings shows OpenRGB launch progress and PawnIO installation status. **Check required apps** repeats read-only checks; **Get PawnIO** opens the official site. PawnIO is a kernel driver, not a separate app window that must be opened each boot. Its detected installation alone does not prove hardware access. OpenRGB/PawnIO are not bundled or installed automatically. Close iCUE and other competing RGB apps.
+
+**Disable automatic Windows startup** removes this bridge's login entry and, when configured, requests one-time approval to remove its managed OpenRGB task. A full uninstall also removes that task; if approval is canceled or removal cannot be verified, uninstall stops so the managed task is not abandoned. Upgrades preserve startup registration. OpenRGB and PawnIO remain separately installed.
 
 ## Background behavior
 
@@ -53,4 +68,4 @@ Uninstall through Windows Settings or the uninstaller. Its own sign-in entry is 
 
 ## Scope of verification
 
-Automated desktop tests use synthetic OpenRGB controllers and private temporary profiles. They exercise actual Electron UI → bearer-protected Node API → selected devices/config backup → HAP publication → SDK color bytes, identity-preserving stop/start, QR privacy, renderer isolation, setup completion and tray hiding. Windows installer verification adds install, packaged runtime, Windows login registration/removal and uninstall checks. These checks do not establish physical device compatibility, actual iPhone pairing, Windows reboot/sign-in, SmartScreen behavior, or sleep/wake reliability. See [manual verification](manual-verification.md).
+Automated desktop tests use synthetic OpenRGB controllers and private temporary profiles. They exercise actual Electron UI → bearer-protected Node API → selected devices/config backup → HAP publication → SDK color bytes, identity-preserving stop/start, QR privacy, renderer isolation, setup completion and tray hiding. Windows installer verification adds install, packaged runtime, Windows login registration/removal and uninstall checks. Windows CI separately registers/verifies/removes an isolated elevated task using an inert executable fixture; the UAC dialog itself and an actual sign-in trigger remain manual checks. These checks do not establish physical device compatibility, actual iPhone pairing, Windows reboot/sign-in, SmartScreen behavior, or sleep/wake reliability. See [manual verification](manual-verification.md).

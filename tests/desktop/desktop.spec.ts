@@ -284,6 +284,8 @@ test('desktop renderer is sandboxed and cannot navigate to external code', async
   ).toBeVisible();
 });
 test('Windows login preference, setup completion and tray lifecycle', async () => {
+  if (process.platform === 'win32')
+    await page.locator('#setup-openrgb').uncheck();
   if (process.platform === 'win32' && process.env.BRIDGE_DESKTOP_EXE)
     await page.locator('#setup-startup').uncheck();
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
@@ -420,6 +422,66 @@ test('Windows login preference, setup completion and tray lifecycle', async () =
   );
 });
 
+test('Windows OpenRGB startup settings persist and reuse an already available SDK', async () => {
+  test.skip(
+    process.platform !== 'win32',
+    'Windows application startup integration',
+  );
+  const executable = join(root, "OpenRGB's folder", 'OpenRGB.exe');
+  mkdirSync(join(root, "OpenRGB's folder"));
+  writeFileSync(
+    executable,
+    'Inert synthetic file: it must never be executed while the SDK is available.',
+  );
+  const launch = async () => {
+    app = await electron.launch({
+      ...(process.env.BRIDGE_DESKTOP_EXE
+        ? { executablePath: process.env.BRIDGE_DESKTOP_EXE }
+        : {}),
+      args: launchArgs,
+      env: { ...process.env, APPDATA: join(root, 'Roaming') },
+      cwd: resolve('.'),
+      timeout: 40000,
+    });
+    page = await app.firstWindow();
+    await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  };
+  await launch();
+  await app.evaluate(({ dialog }, path) => {
+    dialog.showOpenDialog = async () => ({
+      canceled: false,
+      filePaths: [path],
+    });
+  }, executable);
+  await page
+    .getByRole('button', { name: 'Locate OpenRGB.exe', exact: true })
+    .click();
+  await expect(page.locator('#openrgb-path')).toHaveText(executable);
+  await page.getByLabel('Open OpenRGB when needed', { exact: true }).check();
+  await expect(page.locator('#openrgb-startup-status')).toHaveAttribute(
+    'data-phase',
+    'ready',
+  );
+  await page
+    .getByRole('button', { name: 'Check required apps', exact: true })
+    .click();
+  await expect(page.locator('#pawnio-status')).toContainText('PawnIO driver:');
+  const preferences = JSON.parse(
+    readFileSync(join(root, 'desktop-data', 'desktop-settings.json'), 'utf8'),
+  );
+  expect(preferences.launchOpenRGB).toBe(true);
+  expect(preferences.openRGBAdministrator).toBe(false);
+  await app.close();
+  await launch();
+  await expect(page.locator('#openrgb-startup-status')).toHaveAttribute(
+    'data-phase',
+    'ready',
+  );
+  await expect(
+    page.getByLabel('Open OpenRGB when needed', { exact: true }),
+  ).toBeChecked();
+  await app.close();
+});
 test('detected profiles can be selected directly and preserve existing identity across a restart', async () => {
   // The preceding lifecycle test has quit the app; all profiles are private fixtures.
   const restored = profile + '-Hardware';

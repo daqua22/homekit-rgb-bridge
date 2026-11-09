@@ -8,7 +8,7 @@
 - Simplify the desktop interface to compact Windows-style navigation, standard checkboxes and system light/dark colors.
 - Preserve existing profile/identity/ports/state with explicit profile selection and old-panel takeover.
 - Show detected existing profiles directly with paths, saved-light counts, HomeKit-file status, rescan and direct selection; discover custom folders from recognized legacy Startup entries and block incomplete/unreadable profiles.
-- Optionally launch a selected installed OpenRGB when its SDK is unavailable; no driver installation or elevation.
+- Add automatic OpenRGB readiness waiting and PawnIO checks, plus explicit one-time Windows administrator setup for unattended RAM startup at sign-in. Verify the owned per-account task, protect its executable location, and remove it on disable/uninstall while retaining registration during upgrades. Drivers remain separately installed.
 - Prevent empty HomeKit bridge publication and clear stale discovery after switching backends.
 - Add native desktop/installed-EXE tests and installer/login/uninstall CI review artifacts. Physical hardware/reboot/sleep checks remain separate.
 

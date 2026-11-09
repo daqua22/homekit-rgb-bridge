@@ -38,6 +38,7 @@ it('loads defaults without writing or replacing a profile and persists only desk
     version: 1,
     profile,
     launchOpenRGB: false,
+    openRGBAdministrator: false,
     openRGBPath: '',
     setupComplete: false,
   });

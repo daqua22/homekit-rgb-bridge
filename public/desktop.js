@@ -139,6 +139,10 @@ async function switchBackend(mock) {
 async function discover() {
   if (status.config.adapter === 'mock' && !(await switchBackend(false))) return;
   byId('discovery-status').textContent = 'Connecting to OpenRGB…';
+  if (desktopInfo?.launchOpenRGB) {
+    const startup = await native('ensureOpenRGB');
+    if (!startup.ready) throw Error(startup.message);
+  }
   try {
     inventory = (await api('devices', {})).devices;
     renderDevices();
@@ -548,13 +552,23 @@ async function refreshDesktop() {
   const canAutostart = desktopInfo.platform === 'win32' && desktopInfo.packaged;
   byId('desktop-autostart').disabled = !canAutostart;
   byId('setup-startup').disabled = !canAutostart;
-  if (firstLoad) byId('setup-startup').checked = canAutostart;
+  byId('setup-openrgb').disabled = desktopInfo.platform !== 'win32';
+  if (firstLoad) {
+    byId('setup-startup').checked = canAutostart;
+    byId('setup-openrgb').checked =
+      desktopInfo.platform === 'win32' &&
+      (!desktopInfo.setupComplete || desktopInfo.launchOpenRGB);
+  }
   byId('startup-note').textContent = desktopInfo.legacyStartup
     ? 'A legacy startup launcher exists. Enable this setting to replace this profile’s old launcher with the desktop app.'
     : canAutostart
       ? 'Starts quietly in the tray after you sign in. The PC must stay awake for Home control.'
       : 'Startup is available in the installed Windows build.';
   byId('launch-openrgb').checked = desktopInfo.launchOpenRGB;
+  byId('launch-openrgb').disabled =
+    desktopInfo.platform !== 'win32' || desktopInfo.openRGBAdministrator;
+  byId('configure-windows-startup').disabled = !canAutostart;
+  byId('disable-windows-startup').disabled = !canAutostart;
   byId('openrgb-path').textContent =
     desktopInfo.openRGBPath ||
     'Choose your installed OpenRGB.exe to start it with the bridge.';
@@ -567,6 +581,7 @@ async function refreshDesktop() {
       (others.length === 1 ? '' : 's') +
       ' detected. Choose one below to reuse its saved lights and HomeKit data.'
     : 'No other profiles found in known locations. Search again or browse if your old profile was stored elsewhere.';
+  await refreshStartup();
 }
 for (const [id, command] of [
   ['start-bridge', 'start'],
@@ -613,6 +628,8 @@ byId('save-desktop-settings').addEventListener('click', () =>
     )
       inventory = [];
     await saveConfig(config);
+    if (window.desktop)
+      await refreshStartup(await native('checkPrerequisites'));
     byId('settings-confirm').checked = false;
     notify(
       'Connection settings saved. A private backup was created and pairing was retained.',
@@ -633,25 +650,92 @@ byId('desktop-autostart').addEventListener('change', () => {
   });
 });
 byId('launch-openrgb').addEventListener('change', () => {
-  const launchOpenRGB = byId('launch-openrgb').checked;
+  const desired = byId('launch-openrgb').checked;
   return action(async () => {
     try {
-      await native('preferences', {
-        launchOpenRGB,
-        setupComplete: desktopInfo?.setupComplete ?? false,
-      });
+      if (desired && !desktopInfo?.openRGBPath) {
+        await native('chooseOpenRGB');
+        await refreshDesktop();
+      }
+      await native('preferences', { launchOpenRGB: desired });
       await refreshDesktop();
+      if (desired) await native('startOpenRGB');
       notify('OpenRGB startup preference saved.');
-    } catch (e) {
+    } catch (error) {
       await refreshDesktop();
-      throw e;
+      throw error;
     }
   });
 });
+for (const [id, enabled] of [
+  ['configure-windows-startup', true],
+  ['disable-windows-startup', false],
+])
+  byId(id).addEventListener('click', () =>
+    action(async () => {
+      if (enabled && !desktopInfo?.openRGBPath) {
+        await native('chooseOpenRGB');
+        await refreshDesktop();
+      }
+      await native('configureStartup', enabled);
+      await refreshDesktop();
+      byId('setup-startup').checked = enabled;
+      if (enabled) byId('setup-openrgb').checked = true;
+      notify(
+        enabled
+          ? 'Automatic Windows startup is configured for your next sign-in.'
+          : 'Automatic Windows startup is disabled.',
+      );
+    }),
+  );
+async function refreshStartup(value) {
+  if (!window.desktop) return;
+  const info = value || (await native('startupStatus'));
+  const text = info.configuringStartup
+    ? 'Approve the one-time Windows startup setup, if prompted…'
+    : info.phase === 'idle'
+      ? info.sdkAvailable
+        ? 'The SDK Server port is available.'
+        : 'OpenRGB is not connected. Enable automatic startup or choose Open now.'
+      : info.message;
+  const statusLine = byId('openrgb-startup-status');
+  if (statusLine.textContent !== text) statusLine.textContent = text;
+  statusLine.dataset.phase = info.configuringStartup ? 'checking' : info.phase;
+  byId('configure-windows-startup').textContent =
+    info.taskStatus === 'needs-update'
+      ? 'Update automatic Windows startup'
+      : 'Set up automatic Windows startup';
+  const tasks = {
+    configured: 'configured for sign-in, without a prompt each boot.',
+    'needs-update': 'update setup after changing the OpenRGB path or port.',
+    missing: 'not configured.',
+    foreign: 'an unrelated task uses this name; it was not changed.',
+    unknown: 'could not verify the Windows task.',
+  };
+  byId('managed-startup-status').textContent =
+    'Automatic RAM startup: ' + (tasks[info.taskStatus] || tasks.unknown);
+  const drivers = {
+    installed:
+      'PawnIO driver: installed. No separate PawnIO app needs to stay open.',
+    missing:
+      'PawnIO driver: not detected. Install it once if your hardware requires it.',
+    unknown:
+      'PawnIO driver: could not check. Choose Check required apps to try again.',
+    'not-windows': 'PawnIO driver: Windows only.',
+  };
+  byId('pawnio-status').textContent = drivers[info.pawnio] || drivers.unknown;
+}
+byId('check-prerequisites').addEventListener('click', () =>
+  action(async () => {
+    await refreshStartup(await native('checkPrerequisites'));
+    notify('Required-app checks complete. See the status in Settings.');
+  }),
+);
 byId('choose-openrgb').addEventListener('click', () =>
   action(async () => {
     await native('chooseOpenRGB');
     await refreshDesktop();
+    await refreshStartup(await native('checkPrerequisites'));
   }),
 );
 function profileError(error) {
@@ -762,12 +846,19 @@ for (const button of document.querySelectorAll('[data-help]'))
   );
 byId('finish-setup').addEventListener('click', () =>
   action(async () => {
+    const launchOpenRGB = byId('setup-openrgb').checked;
+    if (launchOpenRGB && !desktopInfo?.openRGBPath) {
+      await native('chooseOpenRGB');
+      await refreshDesktop();
+      if (!desktopInfo?.openRGBPath)
+        throw Error(
+          'Choose OpenRGB.exe, or uncheck automatic OpenRGB startup to finish.',
+        );
+    }
     if (desktopInfo?.platform === 'win32' && desktopInfo.packaged)
       await api('autostart', { enabled: byId('setup-startup').checked });
-    await native('preferences', {
-      launchOpenRGB: desktopInfo?.launchOpenRGB ?? false,
-      setupComplete: true,
-    });
+    await native('preferences', { launchOpenRGB, setupComplete: true });
+    if (launchOpenRGB) await native('startOpenRGB');
     await refreshDesktop();
     await refresh();
     notify(
@@ -822,6 +913,10 @@ void action(async () => {
       'desktop-autostart',
       'setup-startup',
       'launch-openrgb',
+      'setup-openrgb',
+      'configure-windows-startup',
+      'disable-windows-startup',
+      'check-prerequisites',
       'choose-openrgb',
       'choose-profile',
       'finish-setup',
@@ -840,6 +935,7 @@ void action(async () => {
   }
 });
 setInterval(() => {
+  void refreshStartup().catch(() => {});
   if (!busy)
     void refresh().catch(() =>
       notify(

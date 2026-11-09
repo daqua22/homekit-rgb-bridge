@@ -11,25 +11,35 @@ import {
   powerMonitor,
   type IpcMainInvokeEvent,
 } from 'electron';
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync, unlinkSync } from 'node:fs';
 import { join, resolve, basename, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { spawn } from 'node:child_process';
-import { createConnection } from 'node:net';
 import { z } from 'zod';
 import { dataDirectory, readJSON } from '../config/config-manager.js';
 import { startDesktopService } from './service.js';
 import { Logger } from '../utils/logger.js';
 import { setStartup, startupEnabled } from '../windows/startup.js';
 import {
+  desktopSettingsSchema,
   loadDesktopSettings,
   saveDesktopSettings,
   profileCandidates,
   inspectProfile,
   findOpenRGB,
-  openRGBArguments,
   trustedDesktopFrame,
 } from './settings.js';
+import {
+  OpenRGBStartup,
+  pawnIODriverStatus,
+  sdkListening,
+  validOpenRGBExecutable,
+  type DriverStatus,
+} from './prerequisites.js';
+import {
+  configureManagedTask,
+  managedTaskStatus,
+  type TaskStatus,
+} from './startup-task.js';
 
 app.setName('HomeKit RGB Bridge');
 app.setAppUserModelId('dev.kozar.homekit-rgb-bridge');
@@ -44,7 +54,11 @@ mkdirSync(desktopDir, { recursive: true, mode: 0o700 });
 app.setPath('userData', desktopDir);
 const desktopLogger = new Logger('info', desktopDir);
 const profileSearchRoot = resolve(argument('--data-dir') ?? dataDirectory());
-const preferences = loadDesktopSettings(desktopDir, profileSearchRoot);
+const removingStartup = process.argv.includes('--remove-managed-startup');
+const startupMarker = join(desktopDir, 'openrgb-startup-task');
+const preferences = removingStartup
+  ? desktopSettingsSchema.parse({ version: 1, profile: profileSearchRoot })
+  : loadDesktopSettings(desktopDir, profileSearchRoot);
 if (!preferences.openRGBPath && process.platform === 'win32')
   preferences.openRGBPath = findOpenRGB();
 let runtime: Awaited<ReturnType<typeof startDesktopService>>;
@@ -52,7 +66,13 @@ let window: BrowserWindow | undefined;
 let tray: Tray | undefined;
 let quitting = false;
 let stopped = false;
-let launchingRGB = false;
+const openRGBStartup = new OpenRGBStartup();
+let pawnio: DriverStatus =
+  process.platform === 'win32' ? 'unknown' : 'not-windows';
+let sdkAvailable: boolean | undefined;
+let startupError = '';
+let taskStatus: TaskStatus = 'missing';
+let configuringStartup = false;
 const loginOptions = { path: process.execPath, args: ['--hidden'] };
 const loginEnabled = () => {
   if (process.platform !== 'win32') return false;
@@ -79,6 +99,7 @@ function quit(): Promise<void> {
   return (quitTask ??= (async () => {
     if (stopped) return;
     quitting = true;
+    openRGBStartup.cancel();
     await runtime?.stop();
     stopped = true;
     tray?.destroy();
@@ -91,59 +112,108 @@ function show() {
   window?.show();
   window?.focus();
 }
-async function serverListening(host: string, port: number) {
-  return new Promise<boolean>((resolve) => {
-    const socket = createConnection({ host, port });
-    const finish = (value: boolean) => {
-      socket.destroy();
-      resolve(value);
-    };
-    socket.setTimeout(700, () => finish(false));
-    socket.once('connect', () => finish(true));
-    socket.once('error', () => finish(false));
-  });
+function startupStatus() {
+  return {
+    ...openRGBStartup.snapshot(),
+    ...(startupError
+      ? { phase: 'attention', message: startupError, ready: false }
+      : {}),
+    pawnio,
+    sdkAvailable,
+    taskStatus,
+    configuringStartup,
+    executableFound: validOpenRGBExecutable(preferences.openRGBPath),
+  };
+}
+async function checkPrerequisites() {
+  const config = (await runtime.api('status')).config;
+  [pawnio, sdkAvailable, taskStatus] = await Promise.all([
+    pawnIODriverStatus(),
+    sdkListening(config.openrgb.host, config.openrgb.port),
+    existsSync(startupMarker) || preferences.openRGBAdministrator
+      ? managedTaskStatus({
+          path: preferences.openRGBPath,
+          host: config.openrgb.host,
+          port: config.openrgb.port,
+        })
+      : Promise.resolve('missing' as const),
+  ]);
+  return startupStatus();
 }
 async function launchOpenRGB() {
-  if (!runtime || launchingRGB) return;
+  if (!runtime || quitting) return startupStatus();
   const config = (await runtime.api('status')).config;
   if (config.adapter !== 'openrgb')
     throw new Error('Choose real hardware first.');
-  if (await serverListening(config.openrgb.host, config.openrgb.port))
-    return {
-      started: false,
-      message:
-        'An SDK listener is already running. Connect to check its devices.',
-    };
-  if (
-    process.platform !== 'win32' ||
-    basename(preferences.openRGBPath).toLowerCase() !== 'openrgb.exe' ||
-    !existsSync(preferences.openRGBPath)
-  )
-    throw new Error('Choose your installed OpenRGB.exe in Settings first.');
-  launchingRGB = true;
-  try {
-    const child = spawn(
-      preferences.openRGBPath,
-      openRGBArguments(config.openrgb.host, config.openrgb.port),
-      {
-        shell: false,
-        detached: true,
-        windowsHide: true,
-        stdio: 'ignore',
-      },
+  startupError = '';
+  const result = await openRGBStartup.ensure({
+    path: preferences.openRGBPath,
+    host: config.openrgb.host,
+    port: config.openrgb.port,
+    administrator: preferences.openRGBAdministrator,
+  });
+  sdkAvailable = result.ready;
+  return result;
+}
+function beginOpenRGB() {
+  void launchOpenRGB().catch(() => {
+    startupError =
+      'OpenRGB startup is unavailable. Check the lighting source and settings.';
+    desktopLogger.log('error', 'desktop_openrgb_start_unavailable');
+  });
+}
+async function configureWindowsStartup(enabled: boolean) {
+  if (process.platform !== 'win32' || !app.isPackaged)
+    throw Error(
+      'Windows startup setup is available in the installed Windows app.',
     );
-    await new Promise<void>((resolve, reject) => {
-      child.once('spawn', resolve);
-      child.once('error', reject);
-    });
-    child.unref();
-    return {
-      started: true,
-      message:
-        'OpenRGB launched. Allow hardware detection to finish, then Connect. RAM may require OpenRGB administrator access.',
-    };
+  if (configuringStartup)
+    throw Error('Windows startup setup is already in progress.');
+  configuringStartup = true;
+  try {
+    if (enabled) {
+      if (!validOpenRGBExecutable(preferences.openRGBPath))
+        throw Error('Choose your installed OpenRGB.exe first.');
+      const config = (await runtime.api('status')).config;
+      if (config.adapter !== 'openrgb')
+        throw Error('Choose real hardware first.');
+      const hadMarker = existsSync(startupMarker);
+      writeFileSync(startupMarker, 'v1\n', { mode: 0o600 });
+      try {
+        await configureManagedTask({
+          path: preferences.openRGBPath,
+          host: config.openrgb.host,
+          port: config.openrgb.port,
+        });
+      } catch (error) {
+        const actual = await managedTaskStatus();
+        if (!hadMarker && (actual === 'missing' || actual === 'foreign'))
+          unlinkSync(startupMarker);
+        throw error;
+      }
+      taskStatus = 'configured';
+      setLogin(true);
+      const next = {
+        ...preferences,
+        launchOpenRGB: true,
+        openRGBAdministrator: true,
+      };
+      saveDesktopSettings(desktopDir, next);
+      Object.assign(preferences, next);
+      beginOpenRGB();
+    } else {
+      if (existsSync(startupMarker) || preferences.openRGBAdministrator)
+        await configureManagedTask();
+      taskStatus = 'missing';
+      if (existsSync(startupMarker)) unlinkSync(startupMarker);
+      setLogin(false);
+      const next = { ...preferences, openRGBAdministrator: false };
+      saveDesktopSettings(desktopDir, next);
+      Object.assign(preferences, next);
+    }
+    return true;
   } finally {
-    launchingRGB = false;
+    configuringStartup = false;
   }
 }
 function validateSender(event: IpcMainInvokeEvent) {
@@ -168,7 +238,7 @@ function handle(name: string, fn: (value: unknown) => unknown) {
           error instanceof z.ZodError
             ? 'Invalid desktop settings.'
             : error instanceof Error &&
-                /^(Choose |Select |Windows startup|An SDK|OpenRGB requires|This profile is no longer detected\.|HomeKit data exists but identity\.json is missing\.|The profile configuration is unreadable or unsupported\.|The HomeKit storage is unreadable\.|The profile is unavailable\.)/.test(
+                /^(Choose |Select |Windows startup|Windows could|Use the same Windows administrator|Install OpenRGB inside|An unrelated task|An SDK|OpenRGB requires|This profile is no longer detected\.|HomeKit data exists but identity\.json is missing\.|The profile configuration is unreadable or unsupported\.|The HomeKit storage is unreadable\.|The profile is unavailable\.)/.test(
                   error.message,
                 )
               ? error.message
@@ -333,18 +403,29 @@ async function boot() {
     profiles: profileCandidates(profileSearchRoot, [preferences.profile]),
     openRGBPath: preferences.openRGBPath,
     launchOpenRGB: preferences.launchOpenRGB,
+    openRGBAdministrator: preferences.openRGBAdministrator,
     setupComplete: preferences.setupComplete,
     autostart: loginEnabled(),
     legacyStartup: startupEnabled(preferences.profile),
   }));
   handle('desktop:preferences', (value) => {
     const p = z
-      .strictObject({ launchOpenRGB: z.boolean(), setupComplete: z.boolean() })
+      .strictObject({
+        launchOpenRGB: z.boolean().optional(),
+        setupComplete: z.boolean().optional(),
+      })
       .parse(value);
-    if (p.launchOpenRGB && !existsSync(preferences.openRGBPath))
+    const next = { ...preferences, ...p };
+    if (p.launchOpenRGB === false && preferences.openRGBAdministrator)
+      throw Error(
+        'Windows startup is managed by the RAM startup task. Use Disable automatic Windows startup first.',
+      );
+    if (next.launchOpenRGB && !validOpenRGBExecutable(next.openRGBPath))
       throw new Error('Choose your installed OpenRGB.exe first.');
-    Object.assign(preferences, p);
-    saveDesktopSettings(desktopDir, preferences);
+    if (next.openRGBAdministrator && process.platform !== 'win32')
+      throw new Error('Choose administrator launch only on Windows.');
+    saveDesktopSettings(desktopDir, next);
+    Object.assign(preferences, next);
     return true;
   });
   handle('desktop:profile', async (value) => {
@@ -401,7 +482,18 @@ async function boot() {
     saveDesktopSettings(desktopDir, preferences);
     return true;
   });
-  handle('desktop:openrgb-start', () => launchOpenRGB());
+  handle('desktop:configure-startup', (value) =>
+    configureWindowsStartup(z.boolean().parse(value)),
+  );
+  handle('desktop:startup-status', () => startupStatus());
+  handle('desktop:prerequisites', () => checkPrerequisites());
+  handle('desktop:openrgb-start', (value) => {
+    if (z.boolean().optional().parse(value)) return launchOpenRGB();
+    beginOpenRGB();
+    return {
+      message: 'Checking OpenRGB startup. Progress appears in Settings.',
+    };
+  });
   const help: Record<string, string> = {
     openrgb: 'https://openrgb.org/',
     pawnio: 'https://pawnio.eu/',
@@ -414,15 +506,11 @@ async function boot() {
     await shell.openExternal(help[key]!);
   });
   powerMonitor.on('resume', () => {
-    if (preferences.launchOpenRGB)
-      void launchOpenRGB().catch(() =>
-        console.error('OpenRGB launch unavailable; check its settings.'),
-      );
+    void checkPrerequisites().catch(() => {});
+    if (preferences.launchOpenRGB) beginOpenRGB();
   });
-  if (preferences.launchOpenRGB)
-    void launchOpenRGB().catch(() =>
-      console.error('OpenRGB launch unavailable; check its settings.'),
-    );
+  void checkPrerequisites().catch(() => {});
+  if (preferences.launchOpenRGB) beginOpenRGB();
   runtime.child.once('exit', () => {
     if (!quitting) void quit();
   });
@@ -430,7 +518,18 @@ async function boot() {
   desktopLogger.log('info', 'desktop_window_loaded');
   if (!process.argv.includes('--hidden') || !preferences.setupComplete) show();
 }
-if (!app.requestSingleInstanceLock()) app.quit();
+if (removingStartup) {
+  void app
+    .whenReady()
+    .then(async () => {
+      if (existsSync(startupMarker)) {
+        await configureManagedTask();
+        unlinkSync(startupMarker);
+      }
+      app.exit(0);
+    })
+    .catch(() => app.exit(1));
+} else if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', () => {
     desktopLogger.log('info', 'desktop_second_instance');

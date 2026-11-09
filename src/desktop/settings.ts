@@ -14,6 +14,7 @@ export const desktopSettingsSchema = z.strictObject({
   profile: z.string().refine(isAbsolute, 'Choose an absolute profile folder'),
   openRGBPath: z.string().default(''),
   launchOpenRGB: z.boolean().default(false),
+  openRGBAdministrator: z.boolean().default(false),
   setupComplete: z.boolean().default(false),
 });
 export type DesktopSettings = z.infer<typeof desktopSettingsSchema>;

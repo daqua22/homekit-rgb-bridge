@@ -9,7 +9,9 @@ Release review candidate. Publication requires explicit maintainer approval.
 - A separate official Node sidecar with HAP-compatible crypto; Electron’s embedded runtime is not used for HomeKit cryptography.
 - Guided real-hardware discovery, named light selection, color presets, brightness, HomeKit pairing guidance and clear demo-mode labeling.
 - A tray menu and close-to-tray behavior, optional user-level Windows sign-in startup, and remembered settings/profile.
-- Optional launch of an explicitly selected installed OpenRGB, avoiding a duplicate when its SDK port is already listening.
+- Automatic OpenRGB launch with SDK readiness waiting, bounded progress and concurrent-request coalescing.
+- Optional one-time Windows administrator setup for unattended RAM startup after sign-in, with a current-account scheduled task, protected executable validation, verified removal and uninstall cleanup; the bridge remains a normal-user app.
+- PawnIO installation checks and official setup guidance; it does not need a separate app window.
 - Detected-profile picker with paths, selected-light counts, local HomeKit-file status, search refresh and a manual folder fallback. Recognized legacy startup entries can locate custom profiles; incomplete profiles are blocked.
 - Explicit existing-profile selection and old-panel takeover; pairing, stable light IDs, selected ports and saved state remain in the private profile.
 - Prevent empty HomeKit bridge starts and clear stale virtual discovery on backend changes.
@@ -20,7 +22,7 @@ Verify the EXE against `SHA256SUMS-desktop.txt`, install it, and open HomeKit RG
 
 ## Requirements and known limitations
 
-Windows 10/11 x64; separately installed OpenRGB and its required hardware access/driver; an awake PC on the same trusted LAN as Apple Home. OpenRGB support depends on exact hardware/firmware. Manufacturer utilities such as iCUE can conflict. OpenRGB/PawnIO are not bundled or elevated automatically. No cloud, Homebridge or additional hardware is required.
+Windows 10/11 x64; separately installed OpenRGB and its required hardware access/driver; an awake PC on the same trusted LAN as Apple Home. OpenRGB support depends on exact hardware/firmware. Manufacturer utilities such as iCUE can conflict. OpenRGB/PawnIO are not bundled or installed automatically. Elevated OpenRGB startup requires explicit one-time Windows setup in an administrator account; it runs after sign-in. No cloud, Homebridge or additional hardware is required.
 
 The installer is unsigned by this project and can trigger SmartScreen or organization policy. Do not disable those policies to run a candidate. No automatic updates, arm64 distribution or Windows service is provided. Startup is after sign-in. Sleep/off prevents control; physical recovery testing remains pending. Software off sends black and brightness scales RGB channels; neither is a native electrical-power claim.
 

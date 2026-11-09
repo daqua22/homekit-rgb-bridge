@@ -15,7 +15,8 @@ _Actual Electron capture against synthetic SDK controllers. This is interface ve
 - A Windows x64 installer and Start menu shortcut. No npm, system Node, browser URL or VBS launcher needed for everyday use.
 - A simple path: connect OpenRGB → choose and name lights → add them to Apple Home.
 - Compact Windows-style navigation and settings, system light/dark themes, color presets and software brightness/on-off controls.
-- Close-to-tray operation, Start/Stop/Quit controls and optional quiet startup after Windows sign-in.
+- Close-to-tray operation, Start/Stop/Quit controls and automatic bridge/OpenRGB startup after Windows sign-in.
+- Optional one-time administrator setup for unattended OpenRGB RAM access, plus PawnIO driver checks; see [startup setup](docs/desktop-v2.md#start-everything-after-windows-sign-in).
 - A detected-profile picker to reuse earlier local HomeKit files, plus remembered connection and startup preferences; optional launch of an installed OpenRGB.
 - Persistent HomeKit pairing, stable existing whole-device identities, private backups and explicit upgrade/profile handling.
 - Advanced experimental zones and groups, with serialized commands and explicit partial-failure reporting.

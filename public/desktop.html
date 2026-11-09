@@ -134,10 +134,17 @@
             </li>
           </ol>
           <div class="setup-finish">
-            <label
-              ><input id="setup-startup" type="checkbox" checked /> Start
-              quietly when I sign in to Windows</label
-            ><button id="finish-setup" disabled>Finish setup</button>
+            <div class="setup-options">
+              <label
+                ><input id="setup-startup" type="checkbox" checked /> Start
+                quietly when I sign in to Windows</label
+              >
+              <label
+                ><input id="setup-openrgb" type="checkbox" /> Start OpenRGB
+                automatically with the bridge</label
+              >
+            </div>
+            <button id="finish-setup" disabled>Finish setup</button>
           </div>
         </article>
         <div class="section-title">
@@ -307,8 +314,10 @@
             <div>
               <strong>Open OpenRGB when needed</strong>
               <p>
-                Start your installed OpenRGB in the background if its SDK server
-                is not listening. No elevation is requested.
+                Start your installed OpenRGB with the bridge and after waking.
+                Wait for its SDK Server without opening duplicate copies. When
+                RAM startup is configured, use Disable automatic Windows startup
+                to turn it off.
               </p>
             </div>
             <label class="switch"
@@ -318,11 +327,50 @@
                 aria-label="Open OpenRGB when needed" /><span></span
             ></label>
           </div>
+          <div class="setting-row">
+            <div>
+              <strong>Automatic startup for RAM lighting</strong>
+              <p>
+                One-time Windows administrator approval starts the bridge and
+                OpenRGB after sign-in, without a prompt every boot. Install
+                OpenRGB in Program Files first. PawnIO must already be
+                installed.
+              </p>
+            </div>
+          </div>
+          <p id="managed-startup-status" class="footnote">
+            Automatic RAM startup: not configured.
+          </p>
+          <div class="button-row">
+            <button id="configure-windows-startup">
+              Set up automatic Windows startup
+            </button>
+            <button id="disable-windows-startup" class="secondary">
+              Disable automatic Windows startup
+            </button>
+          </div>
           <div class="path-row">
             <p id="openrgb-path">No OpenRGB executable selected.</p>
             <button id="choose-openrgb" class="secondary">
               Locate OpenRGB.exe</button
             ><button id="launch-openrgb-now" class="secondary">Open now</button>
+          </div>
+          <p
+            id="openrgb-startup-status"
+            class="footnote"
+            role="status"
+            aria-live="polite"
+          >
+            Checking required apps…
+          </p>
+          <p id="pawnio-status" class="footnote">
+            PawnIO driver: not checked yet.
+          </p>
+          <div class="button-row">
+            <button id="check-prerequisites" class="secondary">
+              Check required apps
+            </button>
+            <button data-help="pawnio" class="text-button">Get PawnIO ↗</button>
           </div>
           <p class="footnote">
             RAM detection may require PawnIO and running OpenRGB as
