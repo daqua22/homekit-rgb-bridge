@@ -6,6 +6,7 @@ import {
   type Page,
 } from '@playwright/test';
 import {
+  cpSync,
   mkdtempSync,
   realpathSync,
   mkdirSync,
@@ -71,6 +72,7 @@ test.beforeAll(async () => {
       ? { executablePath: process.env.BRIDGE_DESKTOP_EXE }
       : {}),
     args: launchArgs,
+    env: { ...process.env, APPDATA: join(root, 'Roaming') },
     cwd: resolve('.'),
     timeout: 40000,
   });
@@ -371,7 +373,10 @@ test('Windows login preference, setup completion and tray lifecycle', async () =
   ).toBe(1);
   expect(existsSync(join(profile, 'admin-session.json'))).toBe(true);
   const executable = await app.evaluate(() => process.execPath);
-  const launchEnv = { ...process.env };
+  const launchEnv: NodeJS.ProcessEnv = {
+    ...process.env,
+    APPDATA: join(root, 'Roaming'),
+  };
   delete launchEnv.ELECTRON_RUN_AS_NODE;
   delete launchEnv.NODE_OPTIONS;
   const second = spawn(executable, launchArgs, {
@@ -413,4 +418,136 @@ test('Windows login preference, setup completion and tray lifecycle', async () =
   expect(readFileSync(join(profile, 'identity.json'), 'utf8')).toBe(
     originalIdentity,
   );
+});
+
+test('detected profiles can be selected directly and preserve existing identity across a restart', async () => {
+  // The preceding lifecycle test has quit the app; all profiles are private fixtures.
+  const restored = profile + '-Hardware';
+  cpSync(profile, restored, { recursive: true });
+  const config = JSON.parse(
+    readFileSync(join(restored, 'config.json'), 'utf8'),
+  );
+  config.admin.port = await freePort();
+  config.homekit.port = await freePort();
+  writeFileSync(join(restored, 'config.json'), JSON.stringify(config));
+  const restoredConfig = readFileSync(join(restored, 'config.json'), 'utf8');
+  const restoredIdentity = readFileSync(
+    join(restored, 'identity.json'),
+    'utf8',
+  );
+  const launch = async () => {
+    app = await electron.launch({
+      ...(process.env.BRIDGE_DESKTOP_EXE
+        ? { executablePath: process.env.BRIDGE_DESKTOP_EXE }
+        : {}),
+      args: launchArgs,
+      env: { ...process.env, APPDATA: join(root, 'Roaming') },
+      cwd: resolve('.'),
+      timeout: 40000,
+    });
+    page = await app.firstWindow();
+    await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  };
+  await launch();
+  await expect(page.locator('#desktop-profile')).toHaveText(profile);
+  const rejected = await page.evaluate(
+    (path) =>
+      (
+        window as unknown as {
+          desktop: { chooseProfile(path: string): Promise<{ ok: boolean }> };
+        }
+      ).desktop.chooseProfile(path),
+    join(root, 'Not a detected profile'),
+  );
+  expect(rejected.ok).toBe(false);
+  await page
+    .getByRole('button', { name: 'Find existing profiles', exact: true })
+    .click();
+  const picker = page.getByRole('dialog', { name: 'Existing bridge profiles' });
+  await expect(picker).toBeVisible();
+  const detected = picker
+    .locator('.profile-choice')
+    .filter({ hasText: restored });
+  await expect(detected).toContainText(
+    'Saved HomeKit data and identity found.',
+  );
+  await expect(
+    detected.getByRole('button', {
+      name: 'Use profile & restart',
+      exact: true,
+    }),
+  ).toBeEnabled();
+  const broken = profile + '-MissingIdentity';
+  mkdirSync(join(broken, 'hap-storage'), { recursive: true });
+  writeFileSync(join(broken, 'config.json'), restoredConfig);
+  writeFileSync(
+    join(broken, 'hap-storage', 'AccessoryInfo.AABBCCDDEEFF.json'),
+    'synthetic marker',
+  );
+  await picker
+    .getByRole('button', { name: 'Search again', exact: true })
+    .click();
+  const incomplete = picker
+    .locator('.profile-choice')
+    .filter({ hasText: broken });
+  await expect(incomplete).toContainText('Restore the original identity');
+  await expect(
+    incomplete.getByRole('button', {
+      name: 'Use profile & restart',
+      exact: true,
+    }),
+  ).toBeDisabled();
+  await expect(
+    picker.getByRole('heading', {
+      name: 'Existing bridge profiles',
+      exact: true,
+    }),
+  ).toBeInViewport();
+  await expect(
+    picker.getByRole('button', { name: 'Cancel', exact: true }),
+  ).toBeInViewport();
+
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({ path: 'artifacts/desktop-profile-picker.png' });
+  // Hold the automatic relaunch so Playwright can attach to the replacement process.
+  // The next real launch below uses the original args and must honor the saved selection.
+  await app.evaluate(({ app, dialog }) => {
+    app.relaunch = () => {};
+    dialog.showOpenDialog = async () => {
+      throw Error('Detected selection must not require a folder picker');
+    };
+  });
+  await Promise.all([
+    app.waitForEvent('close'),
+    detected
+      .getByRole('button', { name: 'Use profile & restart', exact: true })
+      .click(),
+  ]);
+  expect(
+    JSON.parse(
+      readFileSync(join(root, 'desktop-data', 'desktop-settings.json'), 'utf8'),
+    ).profile,
+  ).toBe(restored);
+  expect(readFileSync(join(restored, 'config.json'), 'utf8')).toBe(
+    restoredConfig,
+  );
+  expect(readFileSync(join(restored, 'identity.json'), 'utf8')).toBe(
+    restoredIdentity,
+  );
+  expect(readFileSync(join(profile, 'identity.json'), 'utf8')).toBe(
+    originalIdentity,
+  );
+  expect(existsSync(join(profile, 'application.lock'))).toBe(false);
+  await launch();
+  await expect(page.locator('#desktop-profile')).toHaveText(restored);
+  expect(readFileSync(join(restored, 'identity.json'), 'utf8')).toBe(
+    restoredIdentity,
+  );
+  await app.close();
+  expect(existsSync(join(restored, 'application.lock'))).toBe(false);
+  expect(existsSync(join(restored, 'admin-session.json'))).toBe(false);
 });

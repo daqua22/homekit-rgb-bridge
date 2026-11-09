@@ -16,7 +16,7 @@ _Actual Electron capture against synthetic SDK controllers. This is interface ve
 - A simple path: connect OpenRGB → choose and name lights → add them to Apple Home.
 - Compact Windows-style navigation and settings, system light/dark themes, color presets and software brightness/on-off controls.
 - Close-to-tray operation, Start/Stop/Quit controls and optional quiet startup after Windows sign-in.
-- Remembered profile, connection and startup preferences; optional launch of an installed OpenRGB.
+- A detected-profile picker to reuse earlier local HomeKit files, plus remembered connection and startup preferences; optional launch of an installed OpenRGB.
 - Persistent HomeKit pairing, stable existing whole-device identities, private backups and explicit upgrade/profile handling.
 - Advanced experimental zones and groups, with serialized commands and explicit partial-failure reporting.
 - A protected local Node API and sandboxed desktop renderer. Setup credentials are revealed only on request.

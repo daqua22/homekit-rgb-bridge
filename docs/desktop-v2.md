@@ -19,11 +19,19 @@ The screenshot is captured from the running Electron app against a synthetic SDK
 1. Download the review artifact from a successful [CI run](https://github.com/daqua22/homekit-rgb-bridge/actions/workflows/ci.yml), extract its download ZIP and compare the installer’s SHA-256 with `SHA256SUMS-desktop.txt`.
 2. Run `HomeKit-RGB-Bridge-0.2.0-Setup-x64.exe`. It installs for your Windows user and creates shortcuts. The project does not sign the EXE; verify its source/checksum. Follow your organization’s security policy if unsigned software is blocked.
 3. Open **HomeKit RGB Bridge** from the Start menu. A new profile defaults to OpenRGB, with no demo lights and no empty HomeKit bridge published.
-4. Already used v1? Before selecting lights, open **Settings → Your profile → Open an existing profile** and choose the exact old folder containing `config.json`. Common folders are `%LOCALAPPDATA%\HomeKitRGBBridge` and `%LOCALAPPDATA%\HomeKitRGBBridge-Hardware`. The app restarts with the selected profile. Never copy pairing keys into the installation directory.
+4. Already used v1? Before selecting lights, open **Settings → Your profile → Find existing profiles** (or **Choose existing profile** in the setup banner). The app lists detected folders with their bridge names, selected-light counts and whether local HomeKit files exist. Choose **Use profile & restart** on the profile you used before. Common folders are `%LOCALAPPDATA%\HomeKitRGBBridge` and `%LOCALAPPDATA%\HomeKitRGBBridge-Hardware`. If yours is not listed, choose **Browse for another folder** and select the exact folder containing its `config.json`. Never copy pairing keys into the installation directory.
 5. OpenRGB remains a separate prerequisite. It must detect your hardware and have its SDK Server listening locally, normally `127.0.0.1:6742`. In the app choose **Connect & discover**. Mock profiles show a clear banner and require explicit confirmation to switch to hardware; there is no silent fallback to mock mode.
 6. Select devices, give them names, confirm the selection and choose **Save lights & start bridge**. A private backup is created. New lights initially receive black until switched on.
 7. In **Apple Home**, reveal the private pairing QR/PIN only when ready. On your iPhone use **+ → Add Accessory**, then assign rooms to each light. The bridge itself is listed under **Home Settings → Home Hubs & Bridges**. A paired bridge with zero enabled lights has no light tiles; V2 prevents new empty-bridge starts.
 8. Choose **Finish setup**. On the installed Windows app, its startup checkbox controls whether the desktop app starts quietly after sign-in. You can change this later in Settings.
+
+## Finding an earlier pairing
+
+Profile discovery checks the current/default folder, neighboring `HomeKitRGBBridge-*` folders and custom paths recorded by recognized bridge Startup launchers for this Windows account. **Search again** refreshes the list. Discovery reads configuration metadata and checks for identity/HomeKit files; it does not read pairing-key contents, merge profiles, or select a different profile automatically.
+
+A folder with HomeKit files is not proof that Apple Home is still paired. The running bridge reports its pairing status after opening that profile. Profiles with unreadable configuration/storage or HomeKit storage without the original `identity.json` are marked unavailable; restore missing original files from a private backup instead of resetting pairing.
+
+A profile on another drive, under another Windows account or in an arbitrary custom location may require **Browse for another folder**. The app cannot recover local pairing keys from your iPhone or iCloud. If the original files were deleted, automatic detection cannot recreate the previous pairing.
 
 ## OpenRGB startup
 

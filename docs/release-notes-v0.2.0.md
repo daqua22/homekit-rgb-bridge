@@ -10,6 +10,7 @@ Release review candidate. Publication requires explicit maintainer approval.
 - Guided real-hardware discovery, named light selection, color presets, brightness, HomeKit pairing guidance and clear demo-mode labeling.
 - A tray menu and close-to-tray behavior, optional user-level Windows sign-in startup, and remembered settings/profile.
 - Optional launch of an explicitly selected installed OpenRGB, avoiding a duplicate when its SDK port is already listening.
+- Detected-profile picker with paths, selected-light counts, local HomeKit-file status, search refresh and a manual folder fallback. Recognized legacy startup entries can locate custom profiles; incomplete profiles are blocked.
 - Explicit existing-profile selection and old-panel takeover; pairing, stable light IDs, selected ports and saved state remain in the private profile.
 - Prevent empty HomeKit bridge starts and clear stale virtual discovery on backend changes.
 

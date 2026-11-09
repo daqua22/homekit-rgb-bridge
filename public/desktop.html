@@ -54,13 +54,13 @@
       </div>
       <div id="profile-banner" class="banner" hidden>
         <div>
-          <strong>Keep your existing HomeKit pairing</strong>
+          <strong>Existing bridge profiles found</strong>
           <p>
-            Existing bridge profiles were found. Open the profile already paired
-            with Apple Home before choosing your lights.
+            Review detected profiles and choose the one you previously used with
+            Apple Home. Switching profiles keeps its existing files.
           </p>
         </div>
-        <button id="open-previous-profile">Open existing profile</button>
+        <button id="open-previous-profile">Choose existing profile</button>
       </div>
       <section id="view-overview" class="view">
         <div class="page-heading">
@@ -374,7 +374,7 @@
           <p id="desktop-profile" class="path-text"></p>
           <p id="existing-profiles" class="footnote"></p>
           <button id="choose-profile" class="secondary">
-            Open an existing profile
+            Find existing profiles
           </button>
           <p class="footnote">
             Choose the folder containing your existing config.json. The app
@@ -423,6 +423,37 @@
       </section>
       <footer>Experimental preview · Daniil Kozar</footer>
     </main>
+    <dialog id="profile-dialog" aria-labelledby="profile-dialog-title">
+      <form method="dialog">
+        <h2 id="profile-dialog-title">Existing bridge profiles</h2>
+        <p>
+          Choose the profile you used before. The app will restart with its
+          lights and HomeKit files. Profiles are never merged or reset.
+        </p>
+        <p id="profile-search-note" class="footnote"></p>
+        <p id="profile-search-empty" class="footnote" hidden>
+          No other profiles were found in the known locations. Browse to the
+          folder containing your old config.json if it was stored elsewhere.
+        </p>
+        <p
+          id="profile-search-error"
+          class="notice error"
+          role="alert"
+          hidden
+        ></p>
+        <div id="profile-choices"></div>
+        <p class="footnote">
+          Saved HomeKit files do not confirm that Apple Home is still paired.
+        </p>
+        <div class="button-row">
+          <button id="rescan-profiles" type="button">Search again</button>
+          <button id="browse-profile" type="button">
+            Browse for another folder
+          </button>
+          <button value="cancel">Cancel</button>
+        </div>
+      </form>
+    </dialog>
     <dialog id="backend-dialog">
       <form method="dialog">
         <span class="eyebrow">CHANGE LIGHTING SOURCE</span>

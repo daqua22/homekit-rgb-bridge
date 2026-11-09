@@ -12,16 +12,12 @@ import {
   type IpcMainInvokeEvent,
 } from 'electron';
 import { existsSync, mkdirSync } from 'node:fs';
-import { join, resolve, basename } from 'node:path';
+import { join, resolve, basename, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { createConnection } from 'node:net';
 import { z } from 'zod';
-import {
-  dataDirectory,
-  loadConfig,
-  readJSON,
-} from '../config/config-manager.js';
+import { dataDirectory, readJSON } from '../config/config-manager.js';
 import { startDesktopService } from './service.js';
 import { Logger } from '../utils/logger.js';
 import { setStartup, startupEnabled } from '../windows/startup.js';
@@ -29,6 +25,7 @@ import {
   loadDesktopSettings,
   saveDesktopSettings,
   profileCandidates,
+  inspectProfile,
   findOpenRGB,
   openRGBArguments,
   trustedDesktopFrame,
@@ -46,10 +43,8 @@ const desktopDir = resolve(
 mkdirSync(desktopDir, { recursive: true, mode: 0o700 });
 app.setPath('userData', desktopDir);
 const desktopLogger = new Logger('info', desktopDir);
-const preferences = loadDesktopSettings(
-  desktopDir,
-  argument('--data-dir') ?? dataDirectory(),
-);
+const profileSearchRoot = resolve(argument('--data-dir') ?? dataDirectory());
+const preferences = loadDesktopSettings(desktopDir, profileSearchRoot);
 if (!preferences.openRGBPath && process.platform === 'win32')
   preferences.openRGBPath = findOpenRGB();
 let runtime: Awaited<ReturnType<typeof startDesktopService>>;
@@ -173,7 +168,7 @@ function handle(name: string, fn: (value: unknown) => unknown) {
           error instanceof z.ZodError
             ? 'Invalid desktop settings.'
             : error instanceof Error &&
-                /^(Choose |Select |Windows startup|An SDK|OpenRGB requires)/.test(
+                /^(Choose |Select |Windows startup|An SDK|OpenRGB requires|This profile is no longer detected\.|HomeKit data exists but identity\.json is missing\.|The profile configuration is unreadable or unsupported\.|The HomeKit storage is unreadable\.|The profile is unavailable\.)/.test(
                   error.message,
                 )
               ? error.message
@@ -335,7 +330,7 @@ async function boot() {
     platform: process.platform,
     packaged: app.isPackaged,
     profile: preferences.profile,
-    profiles: profileCandidates(dataDirectory()),
+    profiles: profileCandidates(profileSearchRoot, [preferences.profile]),
     openRGBPath: preferences.openRGBPath,
     launchOpenRGB: preferences.launchOpenRGB,
     setupComplete: preferences.setupComplete,
@@ -352,18 +347,43 @@ async function boot() {
     saveDesktopSettings(desktopDir, preferences);
     return true;
   });
-  handle('desktop:profile', async () => {
-    const selected = await dialog.showOpenDialog(window!, {
-      title: 'Select your existing bridge profile (contains config.json)',
-      properties: ['openDirectory'],
-    });
-    if (selected.canceled || !selected.filePaths[0]) return false;
-    const profile = resolve(selected.filePaths[0]);
+  handle('desktop:profile', async (value) => {
+    let profile: string;
+    if (value === undefined) {
+      const selected = await dialog.showOpenDialog(window!, {
+        title: 'Select your existing bridge profile (contains config.json)',
+        defaultPath: preferences.profile,
+        properties: ['openDirectory'],
+      });
+      if (selected.canceled || !selected.filePaths[0]) return false;
+      profile = resolve(selected.filePaths[0]);
+    } else {
+      profile = resolve(
+        z.string().min(1).max(32767).refine(isAbsolute).parse(value),
+      );
+      const found = profileCandidates(profileSearchRoot, [
+        preferences.profile,
+      ]).find((candidate) => candidate.path === profile);
+      if (!found)
+        throw new Error(
+          'This profile is no longer detected. Search again or browse to its folder.',
+        );
+      if (!found.available) throw new Error(found.problem);
+    }
+    if (profile === preferences.profile) return false;
     if (!existsSync(join(profile, 'config.json')))
       throw new Error('Select a bridge profile folder containing config.json.');
-    loadConfig(profile); // Read/validate only; never rewrite the selected installation.
+    const selected = inspectProfile(profile); // Read only; never rewrite the selected installation.
+    if (!selected?.available)
+      throw new Error(selected?.problem ?? 'The profile is unavailable.');
+    const previous = preferences.profile;
     preferences.profile = profile;
-    saveDesktopSettings(desktopDir, preferences);
+    try {
+      saveDesktopSettings(desktopDir, preferences);
+    } catch (error) {
+      preferences.profile = previous;
+      throw error;
+    }
     app.relaunch();
     await quit();
     return true;

@@ -558,11 +558,15 @@ async function refreshDesktop() {
   byId('openrgb-path').textContent =
     desktopInfo.openRGBPath ||
     'Choose your installed OpenRGB.exe to start it with the bridge.';
-  byId('existing-profiles').textContent = desktopInfo.profiles.length
-    ? 'Existing profiles found: ' +
-      desktopInfo.profiles.map((p) => p.name).join(', ') +
-      '. Use the matching folder to keep its HomeKit pairing.'
-    : 'Already used an earlier version? Open its existing profile to keep pairing.';
+  const others = desktopInfo.profiles.filter(
+    (p) => p.path !== desktopInfo.profile,
+  );
+  byId('existing-profiles').textContent = others.length
+    ? others.length +
+      ' other profile' +
+      (others.length === 1 ? '' : 's') +
+      ' detected. Choose one below to reuse its saved lights and HomeKit data.'
+    : 'No other profiles found in known locations. Search again or browse if your old profile was stored elsewhere.';
 }
 for (const [id, command] of [
   ['start-bridge', 'start'],
@@ -650,14 +654,99 @@ byId('choose-openrgb').addEventListener('click', () =>
     await refreshDesktop();
   }),
 );
-byId('open-previous-profile').addEventListener('click', () =>
+function profileError(error) {
+  byId('profile-search-error').textContent = error.message;
+  byId('profile-search-error').hidden = false;
+}
+function renderProfileChoices() {
+  const root = byId('profile-choices');
+  root.replaceChildren();
+  byId('profile-search-error').hidden = true;
+  byId('profile-search-empty').hidden = desktopInfo.profiles.some(
+    (p) => p.path !== desktopInfo.profile,
+  );
+  byId('profile-search-note').textContent =
+    'Checks your usual bridge folders and saved startup locations. Browse if you stored your profile elsewhere.';
+  const choices = [...desktopInfo.profiles].sort(
+    (a, b) =>
+      Number(a.path === desktopInfo.profile) -
+      Number(b.path === desktopInfo.profile),
+  );
+  for (const profile of choices) {
+    const current = profile.path === desktopInfo.profile;
+    const row = node('article', undefined, 'profile-choice');
+    row.append(node('h3', profile.name + (current ? ' (current)' : '')));
+    row.append(node('p', profile.path, 'path-text'));
+    if (profile.adapter)
+      row.append(
+        node(
+          'p',
+          profile.bridgeName +
+            ' · ' +
+            (profile.adapter === 'openrgb'
+              ? 'OpenRGB hardware'
+              : 'Virtual demo') +
+            ' · ' +
+            profile.lights +
+            ' selected light' +
+            (profile.lights === 1 ? '' : 's'),
+        ),
+      );
+    row.append(
+      node(
+        'p',
+        profile.problem ||
+          (profile.hasHomeKitData
+            ? 'Saved HomeKit data and identity found.'
+            : profile.hasIdentity
+              ? 'Bridge identity found. No saved HomeKit storage detected.'
+              : 'Configuration found. No saved HomeKit identity or pairing data detected.'),
+      ),
+    );
+    const use = node(
+      'button',
+      current ? 'Current profile' : 'Use profile & restart',
+    );
+    use.type = 'button';
+    use.disabled = current || !profile.available;
+    use.addEventListener('click', () =>
+      action(async () => {
+        try {
+          await native('chooseProfile', profile.path);
+        } catch (error) {
+          profileError(error);
+        }
+      }),
+    );
+    row.append(use);
+    root.append(row);
+  }
+}
+async function openProfilePicker() {
+  hidePairing();
+  await refreshDesktop();
+  renderProfileChoices();
+  byId('profile-dialog').showModal();
+}
+for (const id of ['open-previous-profile', 'choose-profile'])
+  byId(id).addEventListener('click', () => action(openProfilePicker));
+byId('rescan-profiles').addEventListener('click', () =>
   action(async () => {
-    await native('chooseProfile');
+    try {
+      await refreshDesktop();
+      renderProfileChoices();
+    } catch (error) {
+      profileError(error);
+    }
   }),
 );
-byId('choose-profile').addEventListener('click', () =>
+byId('browse-profile').addEventListener('click', () =>
   action(async () => {
-    await native('chooseProfile');
+    try {
+      await native('chooseProfile');
+    } catch (error) {
+      profileError(error);
+    }
   }),
 );
 for (const id of ['launch-openrgb-now', 'launch-rgb-devices'])

@@ -7,6 +7,7 @@
 - Add guided real-hardware setup, device names/color presets, private pairing guidance and remembered desktop settings.
 - Simplify the desktop interface to compact Windows-style navigation, standard checkboxes and system light/dark colors.
 - Preserve existing profile/identity/ports/state with explicit profile selection and old-panel takeover.
+- Show detected existing profiles directly with paths, saved-light counts, HomeKit-file status, rescan and direct selection; discover custom folders from recognized legacy Startup entries and block incomplete/unreadable profiles.
 - Optionally launch a selected installed OpenRGB when its SDK is unavailable; no driver installation or elevation.
 - Prevent empty HomeKit bridge publication and clear stale discovery after switching backends.
 - Add native desktop/installed-EXE tests and installer/login/uninstall CI review artifacts. Physical hardware/reboot/sleep checks remain separate.

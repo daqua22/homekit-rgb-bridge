@@ -631,6 +631,51 @@ dialog {
   color: var(--text);
   background: var(--surface);
 }
+#profile-dialog {
+  width: min(640px, calc(100% - 32px));
+  height: min(640px, 85vh);
+  padding: 0;
+  overflow: hidden;
+}
+#profile-dialog form {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 20px;
+}
+#profile-dialog form > :not(#profile-choices) {
+  flex-shrink: 0;
+}
+#profile-dialog form > p {
+  margin: 8px 0;
+  font-size: 12px;
+}
+#profile-choices {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+#profile-dialog .button-row {
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.profile-choice {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 12px;
+  margin: 12px 0;
+}
+.profile-choice p {
+  font-size: 12px;
+  margin: 8px 0;
+}
+.profile-choice .path-text {
+  margin: 8px 0;
+}
+.profile-choice button {
+  margin-top: 4px;
+}
 dialog::backdrop {
   background: #0006;
 }

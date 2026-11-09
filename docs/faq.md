@@ -27,3 +27,5 @@
 **Can it control hardware with the PC off?** No. The PC, bridge and OpenRGB must run. Sleep/wake/reboot behavior needs manual validation. Remote Siri/automations depend on Apple's home hub/network setup.
 
 **Is the desktop release published?** Publication requires explicit maintainer approval. Review artifacts and notes are prepared; the GitHub workflow only builds, validates and uploads candidates.
+
+**Why does “existing pairing” ask me to choose a folder?** Pairing belongs to the old local profile, not the downloaded app. In V2, **Settings → Your profile → Find existing profiles** lists detected profiles, saved-light counts and HomeKit-file status. Choose **Use profile & restart** to reuse one. The search covers the current/default folder, matching neighboring folders and recognized bridge Startup entries for the same Windows account. Use **Browse for another folder** for other locations. Finding files is not confirmation of an active Apple Home pairing; the bridge checks that after opening the profile. Deleted pairing keys require the original private backup or a deliberate new pairing.

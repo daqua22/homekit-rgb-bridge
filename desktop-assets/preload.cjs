@@ -6,7 +6,7 @@ contextBridge.exposeInMainWorld('desktop', {
   },
   info: () => ipcRenderer.invoke('desktop:info'),
   preferences: (value) => ipcRenderer.invoke('desktop:preferences', value),
-  chooseProfile: () => ipcRenderer.invoke('desktop:profile'),
+  chooseProfile: (path) => ipcRenderer.invoke('desktop:profile', path),
   chooseOpenRGB: () => ipcRenderer.invoke('desktop:openrgb-file'),
   startOpenRGB: () => ipcRenderer.invoke('desktop:openrgb-start'),
   openHelp: (page) => ipcRenderer.invoke('desktop:help', page),
