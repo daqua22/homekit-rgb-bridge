@@ -238,7 +238,13 @@ it.runIf(process.platform === 'win32' && !!process.env.CI)(
       const target = { ...options, path: executable };
       const result = await runPowerShell(configureTaskScript(context, target));
       created = true; // Cleanup also covers a partial registration failure.
-      expect(result.code).toBe(0);
+      if (result.code !== 0)
+        throw Error(
+          'Startup registration failed (' +
+            result.code +
+            '): ' +
+            result.stdout.trim(),
+        );
       expect(await managedTaskStatus(target)).toBe('configured');
       expect(await managedTaskStatus({ ...target, port: 6750 })).toBe(
         'needs-update',

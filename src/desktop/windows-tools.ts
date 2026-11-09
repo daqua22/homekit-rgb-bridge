@@ -31,7 +31,7 @@ export function runWindowsCommand(
               ? error.code
               : null
             : 0,
-          stdout: error ? '' : stdout,
+          stdout,
         }),
     );
     if (input !== undefined) {

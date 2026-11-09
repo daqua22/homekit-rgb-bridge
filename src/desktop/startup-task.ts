@@ -124,23 +124,28 @@ export function configureTaskScript(context: TaskContext, target?: TaskTarget) {
   return (
     commonScript(context) +
     `
+$stage = 'account'
 try {
  if ([Security.Principal.WindowsIdentity]::GetCurrent().User.Value -ne $sid) { exit 20 }
  $principal = [Security.Principal.WindowsPrincipal]::new([Security.Principal.WindowsIdentity]::GetCurrent())
  if (!$principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { exit 21 }
+ $stage = 'existing-task'
  $existing = Get-ManagedTask
  if ($existing -and !(Test-Owned $existing)) { exit 22 }
  ${
    target
      ? `
+ $stage = 'protected-path'
  $exe = ${psLiteral(target.path)}
  if (!(Test-Path -LiteralPath $exe -PathType Leaf)) { exit 23 }
  # Elevated recurring execution is restricted to an administrator-protected installation.
  $roots = @([Environment]::GetFolderPath('ProgramFiles'), [Environment]::GetFolderPath('ProgramFilesX86')) | Where-Object { $_ }
  $root = $roots | Where-Object { $exe.StartsWith($_.TrimEnd('\\') + '\\', [StringComparison]::OrdinalIgnoreCase) } | Select-Object -First 1
  if (!$root) { exit 24 }
+ $stage = 'trusted-owners'
  $trusted = @('S-1-5-18', 'S-1-5-32-544', ([Security.Principal.NTAccount]'NT SERVICE\\TrustedInstaller').Translate([Security.Principal.SecurityIdentifier]).Value)
  $write = [Security.AccessControl.FileSystemRights]'Write,Delete,ChangePermissions,TakeOwnership,DeleteSubdirectoriesAndFiles'
+ $stage = 'path-acl'
  $item = Get-Item -LiteralPath $exe -Force
  while ($item) {
    if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { exit 24 }
@@ -152,16 +157,21 @@ try {
    if ($item.FullName.TrimEnd('\\') -ieq $root.TrimEnd('\\')) { break }
    $item = if ($item -is [IO.DirectoryInfo]) { $item.Parent } else { $item.Directory }
  }
+ $stage = 'action'
  $action = New-ScheduledTaskAction -Execute $exe -WorkingDirectory ${psLiteral(win32.dirname(target.path))} -Argument ${psLiteral(args!)}
+ $stage = 'trigger'
  $trigger = New-ScheduledTaskTrigger -AtLogOn -User $sid
+ $stage = 'principal'
  $user = New-ScheduledTaskPrincipal -UserId $sid -LogonType Interactive -RunLevel Highest
+ $stage = 'settings'
  $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit ([TimeSpan]::Zero)
+ $stage = 'registration'
  Register-ScheduledTask -TaskPath '\\' -TaskName $name -Action $action -Trigger $trigger -Principal $user -Settings $settings -Description $description -Force | Out-Null
  `
      : `if ($existing) { Unregister-ScheduledTask -TaskPath '\\' -TaskName $name -Confirm:$false }`
  }
  exit 0
-} catch { exit 1 }
+} catch { [Console]::WriteLine('startup.' + $stage + '.' + $_.Exception.GetType().Name + '.' + $_.Exception.HResult); exit 1 }
 `
   );
 }
