@@ -1,6 +1,7 @@
 // Keep the same lockfile/tool versions; retry only observed upstream HTTP failures.
 import { spawn } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
+import { prefetchDesktopTooling } from './ci-prefetch-desktop.mjs';
 const task = process.argv[2];
 if (
   !['test:desktop', 'desktop:windows'].includes(task) ||
@@ -46,5 +47,14 @@ for (let attempt = 1; attempt <= 3; attempt++) {
       (attempt + 1) +
       ' of 3.',
   );
-  await delay(5000);
+  try {
+    await prefetchDesktopTooling();
+  } catch (error) {
+    // Integrity/configuration errors stop the job; only another upstream HTTP failure can retry.
+    if (!/Response code 50[234]/.test(String(error))) throw error;
+    console.log(
+      'The official download service is still unavailable; the next bounded attempt retains successfully verified cache entries.',
+    );
+  }
+  await delay(10000 * attempt);
 }
