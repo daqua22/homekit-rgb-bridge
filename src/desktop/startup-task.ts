@@ -54,7 +54,8 @@ function commonScript(context: TaskContext) {
   const expected = taskContext(context.sid);
   if (expected.name !== context.name)
     throw Error('Unrecognized Windows startup task.');
-  return `$ErrorActionPreference = 'Stop'
+  return `$env:PSModulePath = $PSHOME + '\\Modules'
+$ErrorActionPreference = 'Stop'
 $sid = ${psLiteral(context.sid)}
 $name = ${psLiteral(context.name)}
 $description = ${psLiteral(managedTaskDescription)}
@@ -177,7 +178,8 @@ try {
 }
 export function elevatedSetupScript(script: string) {
   const argumentsText = psArguments(script).join(' ');
-  return `$ErrorActionPreference = 'Stop'
+  return `$env:PSModulePath = $PSHOME + '\\Modules'
+$ErrorActionPreference = 'Stop'
 try {
  $p = Start-Process -FilePath ${psLiteral(windowsTool('WindowsPowerShell\\v1.0\\powershell.exe'))} -ArgumentList ${psLiteral(argumentsText)} -Verb RunAs -WindowStyle Hidden -Wait -PassThru
  exit $p.ExitCode

@@ -1,6 +1,6 @@
 # V2 desktop edition (0.2.0 experimental candidate)
 
-V2 is a Windows x64 desktop app, with an EXE installer, Start menu/desktop shortcuts, a local interface, system tray and optional Windows sign-in startup. It bundles Electron for the interface and an unmodified, checksum-pinned official Node runtime for the bridge. No system Node, npm, PowerShell or VBS launcher is needed for ordinary use.
+V2 is a Windows x64 desktop app, with an EXE installer, Start menu/desktop shortcuts, a local interface, system tray and optional Windows sign-in startup. It bundles Electron for the interface and an unmodified, checksum-pinned official Node runtime for the bridge. No system Node, npm or user-run launcher is needed for ordinary use. Optional administrator startup setup uses the built-in Windows PowerShell and Task Scheduler.
 
 The Windows installer is a review artifact until the maintainer approves publication. Use only the exact successful `desktop-windows` CI artifact, `windows-desktop-v2-review`. GitHub sign-in can be required and these review artifacts expire after 30 days. There is no automatic update or release publication.
 

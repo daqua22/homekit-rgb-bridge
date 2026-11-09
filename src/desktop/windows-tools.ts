@@ -60,7 +60,7 @@ export function runPowerShell(script: string, timeout = 15000) {
       '-NoProfile',
       '-NonInteractive',
       '-Command',
-      '[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false); $reader=[IO.StreamReader]::new([Console]::OpenStandardInput(),[Text.Encoding]::UTF8); & ([scriptblock]::Create($reader.ReadToEnd()))',
+      "$env:PSModulePath=$PSHOME+'\\Modules'; [Console]::OutputEncoding=[Text.UTF8Encoding]::new($false); $reader=[IO.StreamReader]::new([Console]::OpenStandardInput(),[Text.Encoding]::UTF8); & ([scriptblock]::Create($reader.ReadToEnd()))",
     ],
     timeout,
     script,
