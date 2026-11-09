@@ -42,6 +42,7 @@ export async function currentTaskContext() {
 }
 function validateTarget(target: TaskTarget) {
   if (
+    target.path.length > 512 ||
     !win32.isAbsolute(target.path) ||
     win32.basename(target.path).toLowerCase() !== 'openrgb.exe' ||
     /["\r\n\0]/.test(target.path)
@@ -125,7 +126,7 @@ export function configureTaskScript(context: TaskContext, target?: TaskTarget) {
     `
 try {
  if ([Security.Principal.WindowsIdentity]::GetCurrent().User.Value -ne $sid) { exit 20 }
- $principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+ $principal = [Security.Principal.WindowsPrincipal]::new([Security.Principal.WindowsIdentity]::GetCurrent())
  if (!$principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { exit 21 }
  $existing = Get-ManagedTask
  if ($existing -and !(Test-Owned $existing)) { exit 22 }

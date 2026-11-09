@@ -198,9 +198,14 @@ it.runIf(process.platform === 'win32' && !!process.env.CI)(
     const executable = join(folder, 'OpenRGB.exe');
     let created = false;
     try {
-      const prepare = `$ErrorActionPreference='Stop'; New-Item -ItemType Directory -Path ${psLiteral(folder)} | Out-Null; $acl=New-Object Security.AccessControl.DirectorySecurity; $admin=[Security.Principal.SecurityIdentifier]'S-1-5-32-544'; $acl.SetOwner($admin); $acl.SetAccessRuleProtection($true,$false); foreach($sid in @('S-1-5-18','S-1-5-32-544','S-1-5-32-545')) { $rights=if($sid -eq 'S-1-5-32-545') {'ReadAndExecute'} else {'FullControl'}; $rule=New-Object Security.AccessControl.FileSystemAccessRule(([Security.Principal.SecurityIdentifier]$sid),$rights,'ContainerInherit,ObjectInherit','None','Allow'); $acl.AddAccessRule($rule) }; Set-Acl -LiteralPath ${psLiteral(folder)} -AclObject $acl; Copy-Item -LiteralPath ${psLiteral(process.execPath)} -Destination ${psLiteral(executable)}; $fileAcl=Get-Acl -LiteralPath ${psLiteral(executable)}; $fileAcl.SetOwner($admin); Set-Acl -LiteralPath ${psLiteral(executable)} -AclObject $fileAcl`;
-      if ((await runPowerShell(prepare)).code !== 0)
-        throw Error('Could not prepare the protected synthetic executable.');
+      const prepare = `$ErrorActionPreference='Stop'; $stage=1; try { New-Item -ItemType Directory -Path ${psLiteral(folder)} | Out-Null; $stage=2; $acl=New-Object Security.AccessControl.DirectorySecurity; $admin=[Security.Principal.SecurityIdentifier]'S-1-5-32-544'; $acl.SetOwner($admin); $acl.SetAccessRuleProtection($true,$false); foreach($sid in @('S-1-5-18','S-1-5-32-544','S-1-5-32-545')) { $rights=if($sid -eq 'S-1-5-32-545') {'ReadAndExecute'} else {'FullControl'}; $rule=[Security.AccessControl.FileSystemAccessRule]::new(([Security.Principal.SecurityIdentifier]$sid),([Security.AccessControl.FileSystemRights]$rights),([Security.AccessControl.InheritanceFlags]'ContainerInherit,ObjectInherit'),([Security.AccessControl.PropagationFlags]::None),([Security.AccessControl.AccessControlType]::Allow)); $acl.AddAccessRule($rule) }; $stage=3; Set-Acl -LiteralPath ${psLiteral(folder)} -AclObject $acl; $stage=4; Copy-Item -LiteralPath ${psLiteral(process.execPath)} -Destination ${psLiteral(executable)}; $stage=5; $fileAcl=Get-Acl -LiteralPath ${psLiteral(executable)}; $stage=6; $fileAcl.SetOwner($admin); Set-Acl -LiteralPath ${psLiteral(executable)} -AclObject $fileAcl } catch { exit (100+$stage) }`;
+      const preparation = await runPowerShell(prepare);
+      if (preparation.code !== 0)
+        throw Error(
+          'Protected fixture preparation failed at stage ' +
+            preparation.code +
+            '.',
+        );
       const target = { ...options, path: executable };
       const result = await runPowerShell(configureTaskScript(context, target));
       created = true; // Cleanup also covers a partial registration failure.

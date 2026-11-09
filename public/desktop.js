@@ -552,7 +552,8 @@ async function refreshDesktop() {
   const canAutostart = desktopInfo.platform === 'win32' && desktopInfo.packaged;
   byId('desktop-autostart').disabled = !canAutostart;
   byId('setup-startup').disabled = !canAutostart;
-  byId('setup-openrgb').disabled = desktopInfo.platform !== 'win32';
+  byId('setup-openrgb').disabled =
+    desktopInfo.platform !== 'win32' || desktopInfo.openRGBAdministrator;
   if (firstLoad) {
     byId('setup-startup').checked = canAutostart;
     byId('setup-openrgb').checked =

@@ -13,9 +13,10 @@ export function runWindowsCommand(
   file: string,
   args: string[],
   timeout = 5000,
+  input?: string,
 ): Promise<{ code: number | null; stdout: string }> {
-  return new Promise((resolve) =>
-    execFile(
+  return new Promise((resolve) => {
+    const child = execFile(
       file,
       args,
       { windowsHide: true, timeout, maxBuffer: 65536 },
@@ -28,8 +29,9 @@ export function runWindowsCommand(
             : 0,
           stdout: error ? '' : stdout,
         }),
-    ),
-  );
+    );
+    if (input !== undefined) child.stdin?.end(input);
+  });
 }
 
 export const psLiteral = (value: string) =>
@@ -46,7 +48,14 @@ export function psArguments(script: string): string[] {
 export function runPowerShell(script: string, timeout = 15000) {
   return runWindowsCommand(
     windowsTool('WindowsPowerShell\\v1.0\\powershell.exe'),
-    psArguments(script),
+    [
+      '-NoLogo',
+      '-NoProfile',
+      '-NonInteractive',
+      '-Command',
+      '[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false); $reader=[IO.StreamReader]::new([Console]::OpenStandardInput(),[Text.Encoding]::UTF8); & ([scriptblock]::Create($reader.ReadToEnd()))',
+    ],
     timeout,
+    script,
   );
 }
